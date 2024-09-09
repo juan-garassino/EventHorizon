@@ -1,19 +1,6 @@
-import sympy as sy
-import scipy.special as sp
-import scipy.optimize as sopt
-import numpy.typing as npt
-import pandas as pd
-import multiprocessing as mp
-from typing import Callable, Union, Tuple, Optional, Dict, Any, Iterable
-from functools import lru_cache
 import matplotlib.pyplot as plt
 import numpy as np
-import warnings
 from .simulation import Simulation
-
-plt.style.use('fivethirtyeight')
-colors = plt.rcParams['axes.prop_cycle'].by_key()['color']  # six fivethirtyeight themed colors
-
 # Function to validate parameters
 def validate_parameters(alpha_vals, r_vals, theta_0, n_vals, acc):
     if not all(0 <= val <= 2*np.pi for val in alpha_vals):

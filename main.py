@@ -7,6 +7,9 @@ from src.visualization.black_hole_plotter import BlackHolePlotter
 from src.visualization.isoradial_plotter import IsoradialPlotter
 from src.visualization.isoredshift_plotter import IsoredshiftPlotter
 
+plt.style.use('fivethirtyeight')
+colors = plt.rcParams['axes.prop_cycle'].by_key()['color']  # six fivethirtyeight themed colors
+
 # Set up parameters
 M = 1.0
 
