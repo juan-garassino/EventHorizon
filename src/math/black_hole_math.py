@@ -8,6 +8,7 @@ from typing import Callable, Union, Tuple, Optional, Dict, Any, Iterable
 from functools import lru_cache
 import matplotlib.pyplot as plt
 import numpy as np
+import warnings
 
 plt.style.use('fivethirtyeight')
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']  # six fivethirtyeight themed colors
@@ -115,40 +116,119 @@ class SymbolicExpressions:
 
 class NumericalFunctions:
     @staticmethod
-    def calc_q(periastron: float, bh_mass: float, tol: float = 1e-3) -> float:
+    def validate_params(periastron: float, bh_mass: float, verbose: bool = False) -> bool:
+        """Validate the input parameters."""
+        if periastron <= 2 * bh_mass:
+            if verbose:
+                print(f"Invalid periastron={periastron} for bh_mass={bh_mass}. Must be greater than 2 * bh_mass.")
+            return False
+        if bh_mass <= 0:
+            if verbose:
+                print(f"Invalid bh_mass={bh_mass}. Must be greater than zero.")
+            return False
+        if verbose:
+            print(f"Parameters valid: periastron={periastron}, bh_mass={bh_mass}")
+        return True
+
+    @staticmethod
+    def calc_q(periastron: float, bh_mass: float, verbose: bool = False) -> float:
         """Convert Periastron distance P to the variable Q."""
-        return np.sqrt((periastron - 2*bh_mass) * (periastron + 6*bh_mass))
+        if not NumericalFunctions.validate_params(periastron, bh_mass, verbose):
+            return np.nan
+        term = (periastron - 2 * bh_mass) * (periastron + 6 * bh_mass)
+        if verbose:
+            print(f"calc_q: periastron={periastron}, bh_mass={bh_mass}, term={term}")
+        if term <= 0:
+            if verbose:
+                print(f"Invalid sqrt argument: term={term}")
+            return np.nan
+        result = np.sqrt(term)
+        if verbose:
+            print(f"calc_q result: {result}")
+        return result
 
     @staticmethod
-    def calc_b_from_periastron(periastron: float, bh_mass: float, tol: float = 1e-5) -> float:
+    def calc_b_from_periastron(periastron: float, bh_mass: float, verbose: bool = False) -> float:
         """Get impact parameter b from Periastron distance P."""
-        return np.sqrt((periastron**3) / (periastron - 2*bh_mass))
+        if not NumericalFunctions.validate_params(periastron, bh_mass, verbose):
+            return np.nan
+        result = np.sqrt((periastron**3) / (periastron - 2 * bh_mass))
+        if verbose:
+            print(f"calc_b_from_periastron: periastron={periastron}, bh_mass={bh_mass}, result={result}")
+        return result
 
     @staticmethod
-    def k(periastron: float, bh_mass: float) -> float:
+    def k(periastron: float, bh_mass: float, verbose: bool = False) -> float:
         """Calculate modulus of elliptic integral."""
-        q = NumericalFunctions.calc_q(periastron, bh_mass)
-        return np.sqrt((q - periastron + 6 * bh_mass) / (2 * q))
+        q = NumericalFunctions.calc_q(periastron, bh_mass, verbose)
+        if verbose:
+            print(f"k: periastron={periastron}, bh_mass={bh_mass}, q={q}")
+        if np.isnan(q) or q == 0:
+            if verbose:
+                print("Invalid q value or division by zero")
+            return np.nan
+        result = np.sqrt((q - periastron + 6 * bh_mass) / (2 * q))
+        if verbose:
+            print(f"k result: {result}")
+        return result
 
     @staticmethod
-    def k2(periastron: float, bh_mass: float, tol: float = 1e-6) -> float:
+    def k2(periastron: float, bh_mass: float, verbose: bool = False) -> float:
         """Calculate the squared modulus of elliptic integral."""
-        q = NumericalFunctions.calc_q(periastron, bh_mass)
-        return (q - periastron + 6 * bh_mass) / (2 * q)
+        q = NumericalFunctions.calc_q(periastron, bh_mass, verbose)
+        if verbose:
+            print(f"k2: periastron={periastron}, bh_mass={bh_mass}, q={q}")
+        if np.isnan(q) or q == 0:
+            if verbose:
+                print("Invalid q value or division by zero")
+            return np.nan
+        result = (q - periastron + 6 * bh_mass) / (2 * q)
+        if verbose:
+            print(f"k2 result: {result}")
+        return result
 
     @staticmethod
-    def zeta_inf(periastron: float, bh_mass: float, tol: float = 1e-6) -> float:
+    def zeta_inf(periastron: float, bh_mass: float, verbose: bool = False) -> float:
         """Calculate Zeta_inf for elliptic integral F(Zeta_inf, k)."""
-        q = NumericalFunctions.calc_q(periastron, bh_mass)
+        q = NumericalFunctions.calc_q(periastron, bh_mass, verbose)
+        if verbose:
+            print(f"zeta_inf: periastron={periastron}, bh_mass={bh_mass}, q={q}")
+        if np.isnan(q) or (q - periastron + 6 * bh_mass) == 0:
+            if verbose:
+                print("Invalid q value or division by zero")
+            return np.nan
         arg = (q - periastron + 2 * bh_mass) / (q - periastron + 6 * bh_mass)
-        return np.arcsin(np.sqrt(arg))
+        if not (0 <= arg <= 1):
+            if verbose:
+                print(f"zeta_inf: Invalid argument for asin={arg}")
+            return np.nan
+        result = np.arcsin(np.sqrt(arg))
+        if verbose:
+            print(f"zeta_inf result: {result}")
+        return result
 
     @staticmethod
-    def zeta_r(periastron: float, r: float, bh_mass: float) -> float:
+    def zeta_r(periastron: float, r: float, bh_mass: float, verbose: bool = False) -> float:
         """Calculate the elliptic integral argument Zeta_r for a given value of P and r."""
-        q = NumericalFunctions.calc_q(periastron, bh_mass)
-        a = (q - periastron + 2 * bh_mass + (4 * bh_mass * periastron) / r) / (q - periastron + (6 * bh_mass))
-        return np.arcsin(np.sqrt(a))
+        q = NumericalFunctions.calc_q(periastron, bh_mass, verbose)
+        if verbose:
+            print(f"zeta_r: periastron={periastron}, r={r}, bh_mass={bh_mass}, q={q}")
+        if not NumericalFunctions.validate_params(periastron, bh_mass, verbose) or np.isnan(q):
+            return np.nan
+        denom = q - periastron + 6 * bh_mass
+        if denom == 0:
+            if verbose:
+                print("Division by zero")
+            return np.nan
+        a = (q - periastron + 2 * bh_mass + (4 * bh_mass * periastron) / r) / denom
+        if not (0 <= a <= 1):
+            if verbose:
+                print(f"zeta_r: Invalid argument for asin={a}")
+            return np.nan
+        result = np.arcsin(np.sqrt(a))
+        if verbose:
+            print(f"zeta_r result: {result}")
+        return result
 
 class GeometricFunctions:
     @staticmethod
@@ -176,58 +256,113 @@ class GeometricFunctions:
 
 class PhysicalFunctions:
     @staticmethod
-    def eq13(periastron: float, ir_radius: float, ir_angle: float, bh_mass: float, incl: float, n: int = 0, tol: float = 1e-6) -> float:
+    def eq13(periastron: float, ir_radius: float, ir_angle: float, bh_mass: float, incl: float, n: int = 0, tol: float = 1e-6, verbose: bool = False) -> float:
         """Relation between radius (where photon was emitted in accretion disk), a and P."""
-        z_inf = NumericalFunctions.zeta_inf(periastron, bh_mass)
-        q = NumericalFunctions.calc_q(periastron, bh_mass)
-        m_ = NumericalFunctions.k2(periastron, bh_mass)
+        if verbose:
+            print(f"eq13 input: periastron: {periastron}, ir_radius: {ir_radius}, ir_angle: {ir_angle}, bh_mass: {bh_mass}, incl: {incl}, n: {n}")
+
+        z_inf = NumericalFunctions.zeta_inf(periastron, bh_mass, verbose=verbose)
+        q = NumericalFunctions.calc_q(periastron, bh_mass, verbose=verbose)
+        m_ = NumericalFunctions.k2(periastron, bh_mass, verbose=verbose)
+
+        # Check for invalid q
+        if q <= 0:
+            if verbose:
+                print(f"Invalid q value: {q}")
+            return np.nan
+
         ell_inf = sp.ellipkinc(z_inf, m_)
         g = np.arccos(GeometricFunctions.cos_gamma(ir_angle, incl))
 
+        # Check for division by zero or invalid values
+        sqrt_term = np.sqrt(periastron / q)
+        if sqrt_term == 0:
+            if verbose:
+                print(f"Invalid sqrt_term value: {sqrt_term}")
+            return np.nan
+
         if n:  # higher order image
             ell_k = sp.ellipk(m_)
-            ellips_arg = (g - 2. * n * np.pi) / (2. * np.sqrt(periastron / q)) - ell_inf + 2. * ell_k
+            ellips_arg = (g - 2. * n * np.pi) / (2. * sqrt_term) - ell_inf + 2. * ell_k
         else:  # direct image
-            ellips_arg = g / (2. * np.sqrt(periastron / q)) + ell_inf
+            ellips_arg = g / (2. * sqrt_term) + ell_inf
 
         sn, cn, dn, ph = sp.ellipj(ellips_arg, m_)
         sn2 = sn * sn
+
         term1 = -(q - periastron + 2. * bh_mass) / (4. * bh_mass * periastron)
         term2 = ((q - periastron + 6. * bh_mass) / (4. * bh_mass * periastron)) * sn2
 
-        return 1. - ir_radius * (term1 + term2)
+        if verbose:
+            print(f"Intermediate values: z_inf: {z_inf}, q: {q}, m_: {m_}, ell_inf: {ell_inf}, g: {g}")
+            print(f"ellips_arg: {ellips_arg}, sn: {sn}, cn: {cn}, dn: {dn}, ph: {ph}")
+            print(f"term1: {term1}, term2: {term2}")
+
+        result = 1. - ir_radius * (term1 + term2)
+        
+        if verbose:
+            print(f"eq13 result: {result}")
+
+        # Check for NaN result
+        if np.isnan(result) and verbose:
+            print(f"Result is NaN: {result}")
+
+        return result
 
     @staticmethod
     def redshift_factor(radius: float, angle: float, incl: float, bh_mass: float, b_: float) -> float:
         """Calculate the gravitational redshift factor (1 + z)."""
-        return (1 + np.sqrt(bh_mass / radius**3) * b_ * np.sin(incl) * np.sin(angle)) / np.sqrt(1 - 3*bh_mass / radius)
+        min_radius = 3.01 * bh_mass  # Set a minimum radius slightly larger than 3*bh_mass
+        if radius < min_radius:
+            radius = min_radius
+            warnings.warn(f"Radius adjusted to minimum allowed value: {min_radius}")
+        
+        numerator = 1 + np.sqrt(bh_mass / radius**3) * b_ * np.sin(incl) * np.sin(angle)
+        denominator = np.sqrt(1 - 3*bh_mass / radius)
+        return numerator / denominator
 
     @staticmethod
-    def flux_intrinsic(r_val: float, acc: float, bh_mass: float) -> float:
+    def flux_intrinsic(r_val: float, acc: float, bh_mass: float, verbose: bool = False) -> float:
         """Calculate the intrinsic flux of the accretion disk."""
         r_ = r_val / bh_mass
         log_arg = ((np.sqrt(r_) + np.sqrt(3)) * (np.sqrt(6) - np.sqrt(3))) / \
                   ((np.sqrt(r_) - np.sqrt(3)) * (np.sqrt(6) + np.sqrt(3)))
-        return (3. * bh_mass * acc / (8 * np.pi)) * (1 / ((r_ - 3) * r_val ** 2.5)) * \
-               (np.sqrt(r_) - np.sqrt(6) + 3 ** -.5 * np.log10(log_arg))
+        result = (3. * bh_mass * acc / (8 * np.pi)) * (1 / ((r_ - 3) * r_val ** 2.5)) * \
+                 (np.sqrt(r_) - np.sqrt(6) + 3 ** -.5 * np.log10(log_arg))
+        if verbose:
+            print(f"flux_intrinsic input: r_val: {r_val}, acc: {acc}, bh_mass: {bh_mass}")
+            print(f"flux_intrinsic result: {result}")
+        return result
 
     @staticmethod
-    def flux_observed(r_val: float, acc: float, bh_mass: float, redshift_factor: float) -> float:
+    def flux_observed(r_val: float, acc: float, bh_mass: float, redshift_factor: float, verbose: bool = False) -> float:
         """Calculate the observed flux."""
-        return PhysicalFunctions.flux_intrinsic(r_val, acc, bh_mass) / redshift_factor**4
+        result = PhysicalFunctions.flux_intrinsic(r_val, acc, bh_mass, verbose) / redshift_factor**4
+        if verbose:
+            print(f"flux_observed input: r_val: {r_val}, acc: {acc}, bh_mass: {bh_mass}, redshift_factor: {redshift_factor}")
+            print(f"flux_observed result: {result}")
+        return result
 
     @staticmethod
-    def phi_inf(periastron: float, M: float) -> float:
+    def phi_inf(periastron: float, M: float, verbose: bool = False) -> float:
         """Calculate phi_inf."""
-        q = NumericalFunctions.calc_q(periastron, M)
-        ksq = NumericalFunctions.k2(periastron, M)
-        z_inf = NumericalFunctions.zeta_inf(periastron, M)
-        return 2. * (np.sqrt(periastron / q)) * (sp.ellipk(ksq) - sp.ellipkinc(z_inf, ksq))
+        q = NumericalFunctions.calc_q(periastron, M, verbose)
+        ksq = NumericalFunctions.k2(periastron, M, verbose)
+        z_inf = NumericalFunctions.zeta_inf(periastron, M, verbose)
+        result = 2. * (np.sqrt(periastron / q)) * (sp.ellipk(ksq) - sp.ellipkinc(z_inf, ksq))
+        if verbose:
+            print(f"phi_inf input: periastron: {periastron}, M: {M}")
+            print(f"phi_inf result: {result}")
+        return result
 
     @staticmethod
-    def mu(periastron: float, bh_mass: float) -> float:
+    def mu(periastron: float, bh_mass: float, verbose: bool = False) -> float:
         """Calculate mu."""
-        return float(2 * PhysicalFunctions.phi_inf(periastron, bh_mass) - np.pi)
+        result = float(2 * PhysicalFunctions.phi_inf(periastron, bh_mass, verbose) - np.pi)
+        if verbose:
+            print(f"mu input: periastron: {periastron}, bh_mass: {bh_mass}")
+            print(f"mu result: {result}")
+        return result
 
 class ImpactParameter:
     @staticmethod
@@ -263,8 +398,7 @@ class ImpactParameter:
         b = vectorized_calc_b(alpha_val)
         
         return b
-
-        
+      
 class Utilities:
     @staticmethod
     def filter_periastrons(periastron: Iterable[float], bh_mass: float, tol: float = 1e-3) -> Iterable[float]:
@@ -289,7 +423,7 @@ class Utilities:
 
 class Optimization:
     @staticmethod
-    def midpoint_method(func: Callable, args: Dict[str, Any], x: list, y: list, ind: int) -> Tuple[list, list, int]:
+    def midpoint_method(func: Callable, args: Dict[str, Any], x: list, y: list, ind: int, verbose: bool = False) -> Tuple[list, list, int]:
         """Implement the midpoint method for root finding."""
         new_x, new_y = x.copy(), y.copy()
 
@@ -304,25 +438,44 @@ class Optimization:
         ind_of_sign_change_ = np.where(np.diff(np.sign(y_)))[0]
         new_ind = ind + ind_of_sign_change_[0] if len(ind_of_sign_change_) > 0 else ind
 
+        if verbose:
+            print(f"Midpoint method: x={new_x}, y={new_y}, new_ind={new_ind}")
+
         return new_x, new_y, new_ind
 
     @staticmethod
-    def improve_solutions_midpoint(func: Callable, args: Dict[str, Any], x: list, y: list, index_of_sign_change: int, iterations: int) -> float:
+    def improve_solutions_midpoint(func: Callable, args: Dict[str, Any], x: list, y: list, index_of_sign_change: int, iterations: int, verbose: bool = False) -> float:
         """Improve solutions using the midpoint method."""
-        new_x, new_y = x, y
+        new_x, new_y = x.copy(), y.copy()  # Make a copy to avoid modifying the original lists
         new_ind = index_of_sign_change
-        for _ in range(iterations):
-            new_x, new_y, new_ind = Optimization.midpoint_method(func=func, args=args, x=new_x, y=new_y, ind=new_ind)
+        for i in range(iterations):
+            new_x, new_y, new_ind = Optimization.midpoint_method(func=func, args=args, x=new_x, y=new_y, ind=new_ind, verbose=verbose)
+            if verbose:
+                print(f"Iteration {i+1}: updated_periastron = {new_x[new_ind]}")
+        
         updated_periastron = new_x[new_ind]
+        if verbose:
+            print(f"Final updated_periastron = {updated_periastron}")
         return updated_periastron
 
     @staticmethod
     def calc_periastron(_r: float, incl: float, _alpha: float, bh_mass: float, midpoint_iterations: int = 100, 
-                        plot_inbetween: bool = False, n: int = 0, min_periastron: float = 1., initial_guesses: int = 20) -> Optional[float]:
+                        plot_inbetween: bool = False, n: int = 0, min_periastron: float = 1., initial_guesses: int = 20, verbose: bool = False) -> Optional[float]:
         """Calculate the periastron for given parameters."""
         periastron_range = list(np.linspace(min_periastron, 2. * _r, initial_guesses))
         y_ = [PhysicalFunctions.eq13(P_value, _r, _alpha, bh_mass, incl, n) for P_value in periastron_range]
         ind = np.where(np.diff(np.sign(y_)))[0]
+
+        if verbose:
+            print(f"periastron_range = {periastron_range}")
+            print(f"y_ = {y_}")
+            print(f"ind = {ind}")
+
+        if len(ind) == 0:
+            if verbose:
+                print("No sign change, cannot find periastron")
+            return None  # No sign change, cannot find periastron
+
         periastron_solution = periastron_range[ind[0]] if len(ind) > 0 else None
 
         if (periastron_solution is not None) and (not np.isnan(periastron_solution)):
@@ -330,7 +483,7 @@ class Optimization:
             periastron_solution = Optimization.improve_solutions_midpoint(
                 func=PhysicalFunctions.eq13, args=args_eq13,
                 x=periastron_range, y=y_, index_of_sign_change=ind[0] if len(ind) > 0 else 0,
-                iterations=midpoint_iterations
+                iterations=midpoint_iterations, verbose=verbose
             )
         return periastron_solution
 
@@ -421,19 +574,39 @@ class Simulation:
 
         return pd.DataFrame(data)
 
+# Function to validate parameters
+def validate_parameters(alpha_vals, r_vals, theta_0, n_vals, acc):
+    if not all(0 <= val <= 2*np.pi for val in alpha_vals):
+        raise ValueError("Alpha values must be within the range [0, 2π]")
+    if not all(val > 2 for val in r_vals):  # Assuming M=1, so r > 2M
+        raise ValueError("Radial values must be greater than 2M")
+    if not (0 <= theta_0 <= np.pi):
+        raise ValueError("Theta_0 must be within the range [0, π]")
+    if not all(val in [0, 1] for val in n_vals):
+        raise ValueError("n values must be either 0 or 1")
+    if acc <= 0:
+        raise ValueError("Acc must be a positive number")
 
 # Main execution
 if __name__ == "__main__":
     # Example usage
     M = 1
     solver_params = {'initial_guesses': 10, 'midpoint_iterations': 10, 'plot_inbetween': False, 'min_periastron': 3.01 * M}
-    
+
     # Generate sample data
     alpha_vals = np.linspace(0, 2*np.pi, 1000)
     r_vals = np.arange(6, 30, 2)
     theta_0 = 80 * np.pi / 180
     n_vals = [0, 1]
     acc = 1e-8
-    
+
+    # Validate parameters
+    try:
+        validate_parameters(alpha_vals, r_vals, theta_0, n_vals, acc)
+    except ValueError as e:
+        print(f"Parameter validation error: {e}")
+        exit(1)
+
+    # Generate image data
     image_data = Simulation.generate_image_data(alpha_vals, r_vals, theta_0, n_vals, M, acc, solver_params)
     print(image_data.head())

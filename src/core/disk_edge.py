@@ -1,9 +1,10 @@
 # disk_edge.py
 
-from base_model import BaseModel
-from utils.coordinates import polar_to_cartesian_lists
+from .base_model import BaseModel
+from ..utils.coordinates import polar_to_cartesian_lists
 from typing import List
-from EventHorizon.src.core.isoradial_model import Isoradial
+from .isoradial_model import Isoradial
+import numpy as np
 
 class DiskEdge(BaseModel):
     def __init__(self, config: dict, radius: float, inclination: float, mass: float, order: int):

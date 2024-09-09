@@ -1,18 +1,25 @@
 # black_hole_plotter.py
 
-from base_plotter import BasePlotter
+from .base_plotter import BasePlotter
 from ..core.black_hole_model import BlackHole
-from typing import Optional
+from typing import Optional, List, Tuple
+from ..core.isoradial_model import Isoradial
+from ..core.isoredshift_model import Isoredshift
+from ..visualization.isoradial_plotter import IsoradialPlotter
+from ..visualization.isoredshift_plotter import IsoredshiftPlotter
 
 class BlackHolePlotter(BasePlotter):
-    def plot_photon_sphere(self, black_hole: BlackHole, c: str = 'red'):
+    def plot_photon_sphere(self, black_hole: BlackHole, c: str = '--'):
         x, y = black_hole.disk_inner_edge.X, black_hole.disk_inner_edge.Y
         self.ax.plot(x, y, color=c, zorder=0)
         return self.ax
 
     def plot_apparent_inner_edge(self, black_hole: BlackHole, linestyle: str = '--'):
-        x, y = black_hole.disk_apparent_inner_edge.X, black_hole.disk_apparent_inner_edge.Y
-        self.ax.plot(x, y, zorder=0, linestyle=linestyle, linewidth=2. * black_hole.plot_params["linewidth"])
+        if hasattr(black_hole, 'disk_apparent_inner_edge'):
+            x, y = black_hole.disk_apparent_inner_edge.X, black_hole.disk_apparent_inner_edge.Y
+            self.ax.plot(x, y, zorder=0, linestyle=linestyle, linewidth=2. * self.config['plot_params']["linewidth"])
+        else:
+            print("Warning: Black hole does not have a disk_apparent_inner_edge attribute.")
         return self.ax
 
     def plot_isoradials(self, black_hole: BlackHole, direct_r: List[float], ghost_r: List[float], show: bool = False):
@@ -26,16 +33,24 @@ class BlackHolePlotter(BasePlotter):
             isoradial = black_hole.isoradials[radius][0]  
             self.plot_isoradial(isoradial, color_range=(-1, 1), alpha=1.0)
 
-        if black_hole.plot_params['plot_core']:
-            self.plot_apparent_inner_edge(black_hole, 'red')
+        if self.config['plot_params']['plot_core']:
+            self.plot_apparent_inner_edge(black_hole, '--')
 
-        self.ax.set_title(f"Isoradials for M={black_hole.mass}", color=black_hole.plot_params['text_color'])
+        self.ax.set_title(f"Isoradials for M={black_hole.mass}", color=self.config['plot_params']['text_color'])
         
-        if show:
-            self.show_plot()
-        if black_hole.plot_params['save_plot']:
-            filename = black_hole.plot_params['title'].replace(' ', '_').replace('°', '')
+        if self.config['plot_params']['legend']:
+            self.ax.legend(prop={'size': 16})
+        else:
+            self.ax.legend().remove()
+
+        if self.config['plot_params']['save_plot']:
+            filename = self.config['plot_params'].get('title', 'black_hole_plot').replace(' ', '_').replace('°', '')
             self.save_plot(filename)
+        elif show:
+            self.show_plot()
+        else:
+            self.close_plot()
+
         return self.fig, self.ax
         
     def plot_isoradial(self, isoradial: Isoradial, color_range: Tuple[float, float] = (0, 1), alpha: float = 1.0):

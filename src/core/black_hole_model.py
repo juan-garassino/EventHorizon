@@ -1,10 +1,11 @@
 # black_hole_model.py
 
-from base_model import BaseModel
-from disk_edge import DiskEdge
-from isoradial_model import Isoradial
-from isoredshift_model import Isoredshift
+from .base_model import BaseModel
+from .disk_edge import DiskEdge
+from .isoradial_model import Isoradial
+from .isoredshift_model import Isoredshift
 from typing import Dict, List, Optional
+import numpy as np
 
 class BlackHole(BaseModel):
     def __init__(self, config: dict, mass: float, inclination: float, acc: float):
@@ -14,6 +15,7 @@ class BlackHole(BaseModel):
         self.acc = acc
         self.disk_outer_edge = DiskEdge(config, 50*mass, inclination, mass, 0)
         self.disk_inner_edge = DiskEdge(config, 6*mass, inclination, mass, 0)
+        self.disk_apparent_inner_edge = DiskEdge(config, 3*mass, inclination, mass, 0)
         self.isoradials: Dict[float, Dict[int, Isoradial]] = {}
         self.isoredshifts: Dict[float, Isoredshift] = {}
 

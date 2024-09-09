@@ -3,7 +3,7 @@
 import matplotlib.pyplot as plt
 import matplotlib.collections as mcoll
 import numpy as np
-from base_plotter import BasePlotter
+from .base_plotter import BasePlotter
 from ..core.isoradial_model import Isoradial
 from typing import Optional, Tuple
 
@@ -13,15 +13,17 @@ class IsoradialPlotter(BasePlotter):
         if ax is None:
             ax = self.ax
         
-        if isoradial.plot_params['redshift']:
-            self._colorline(ax, isoradial.X, isoradial.Y, 
+        label = f'Isoradial (r={isoradial.radius:.2f})'
+        if self.config['plot_params']['redshift']:
+            line = self._colorline(ax, isoradial.X, isoradial.Y, 
                             z=[e - 1 for e in isoradial.redshift_factors],
                             cmap=plt.get_cmap('RdBu_r'), alpha=alpha)
+            line.set_label(label)
         else:
-            ax.plot(isoradial.X, isoradial.Y, color=isoradial.plot_params['line_color'],
-                    alpha=alpha, linestyle=isoradial.plot_params['linestyle'])
+            line, = ax.plot(isoradial.X, isoradial.Y, color=self.config['plot_params']['line_color'],
+                    alpha=alpha, linestyle=self.config['plot_params']['linestyle'], label=label)
         
-        if isoradial.plot_params['legend']:
+        if self.config['plot_params']['legend']:
             ax.legend(prop={'size': 16})
         
         if len(isoradial.X) and len(isoradial.Y):
@@ -40,7 +42,7 @@ class IsoradialPlotter(BasePlotter):
                    norm=plt.Normalize(0, 1), alpha=1.0, linewidth=3):
         if z is None:
             z = np.linspace(0.0, 1.0, len(x))
-        
+    
         segments = self._make_segments(x, y)
         lc = mcoll.LineCollection(segments, array=z, cmap=cmap, norm=norm,
                                   linewidth=linewidth, alpha=alpha)

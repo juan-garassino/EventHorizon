@@ -1,9 +1,9 @@
 # isoradial_model.py
 
 import numpy as np
-from base_model import BaseModel
-from utils.coordinates import polar_to_cartesian_lists
-from ..math.black_hole_math import calc_impact_parameter, redshift_factor
+from .base_model import BaseModel
+from ..utils.coordinates import polar_to_cartesian_lists
+from ..math.black_hole_math import ImpactParameter, PhysicalFunctions #calc_impact_parameter, redshift_factor
 from typing import List, Optional, Tuple
 
 class Isoradial(BaseModel):
@@ -32,8 +32,10 @@ class Isoradial(BaseModel):
         angles = []
         impact_parameters = []
         for alpha in np.linspace(start_angle, end_angle, angular_precision):
-            b = calc_impact_parameter(self.radius, self.inclination, alpha, self.mass, 
-                                      n=self.order, **self.config['isoradial_solver_parameters'])
+            b = ImpactParameter.calc_impact_parameter(
+                alpha, self.radius, self.inclination, self.order, self.mass,
+                **self.config['isoradial_solver_parameters']
+            )
             if b is not None:
                 angles.append(alpha)
                 impact_parameters.append(b)
@@ -53,8 +55,9 @@ class Isoradial(BaseModel):
         self.X, self.Y = polar_to_cartesian_lists(self.radii_b, self.angles, rotation=-np.pi / 2)
 
     def calc_redshift_factors(self):
-        self.redshift_factors = [redshift_factor(self.radius, angle, self.inclination, self.mass, b) 
+        self.redshift_factors = [PhysicalFunctions.redshift_factor(self.radius, angle, self.inclination, self.mass, b) 
                                  for b, angle in zip(self.radii_b, self.angles)]
+        print(f"Redshift factors: {self.redshift_factors}")
 
     def calc_redshift_location_on_ir(self, redshift: float, cartesian: bool = False) -> Tuple[List[float], List[float]]:
         diff = [redshift + 1 - z for z in self.redshift_factors]
@@ -69,18 +72,27 @@ class Isoradial(BaseModel):
                     self.calc_between(new_ind)
                     diff_ = [redshift + 1 - z for z in self.redshift_factors[new_ind:new_ind + 3]]
                     start = np.where(np.diff(np.sign(diff_)))[0]
-                    new_ind += start[0]
+                    if len(start) > 0:
+                        new_ind += start[0]
+                    else:
+                        break  # No sign change found, exit the loop
                 angle_solutions.append(0.5 * (self.angles[new_ind] + self.angles[new_ind + 1]))
                 b_solutions.append(0.5 * (self.radii_b[new_ind] + self.radii_b[new_ind + 1]))
-            if cartesian:
-                return polar_to_cartesian_lists(b_solutions, angle_solutions)
+        if cartesian:
+            return polar_to_cartesian_lists(b_solutions, angle_solutions)
         return angle_solutions, b_solutions
 
     def calc_between(self, ind: int):
         mid_angle = 0.5 * (self.angles[ind] + self.angles[ind + 1])
-        b = calc_impact_parameter(self.radius, self.inclination, mid_angle, self.mass,
-                                  **self.config['isoradial_solver_parameters'])
-        z = redshift_factor(self.radius, mid_angle, self.inclination, self.mass, b)
+        b = ImpactParameter.calc_impact_parameter(
+            mid_angle,
+            self.radius,
+            self.inclination,
+            self.order,
+            self.mass,
+            **self.config['isoradial_solver_parameters']
+        )
+        z = PhysicalFunctions.redshift_factor(self.radius, mid_angle, self.inclination, self.mass, b)
         self.radii_b.insert(ind + 1, b)
         self.angles.insert(ind + 1, mid_angle)
         self.redshift_factors.insert(ind + 1, z)

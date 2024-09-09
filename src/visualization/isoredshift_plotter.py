@@ -1,7 +1,7 @@
 # isoredshift_plotter.py
 
 import matplotlib.pyplot as plt
-from base_plotter import BasePlotter
+from .base_plotter import BasePlotter
 from ..core.isoredshift_model import Isoredshift
 from typing import Optional
 

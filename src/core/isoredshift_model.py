@@ -1,9 +1,11 @@
 # isoredshift_model.py
 
-from base_model import BaseModel
-from isoradial_model import Isoradial
-from utils.coordinates import polar_to_cartesian_lists
+from .base_model import BaseModel
+from .isoradial_model import Isoradial
+from ..utils.coordinates import polar_to_cartesian_lists
 from typing import Dict, List, Optional, Tuple
+import numpy as np
+from ..utils.coordinates import polar_to_cartesian_single, get_angle_around
 
 class Isoredshift(BaseModel):
     def __init__(self, config: dict, inclination: float, redshift: float, mass: float, 
