@@ -17,7 +17,7 @@ params = {
     "isoradial_angular_parameters": {
         "start_angle": 0,  # Starting angle for isoradial calculations (in radians)
         "end_angle": np.pi,  # Ending angle for isoradial calculations (in radians)
-        "angular_precision": 100,  # Number of points to calculate along the isoradial
+        "angular_precision": 50,  # Number of points to calculate along the isoradial
         "mirror": True,  # Whether to mirror the calculated points for symmetry
     },
     "isoradial_solver_parameters": {
@@ -45,14 +45,14 @@ params = {
         "plot_core": True,  # Whether to plot the black hole core (event horizon)
         "redshift": True,  # Whether to color the plot based on redshift values
         "linestyle": "dashed",  # Style of the plotted lines
-        "linewidth": 1.0,  # Width of the plotted lines
+        "linewidth": 0.2,  # Width of the plotted lines
         "key": "",  # Additional key for plot identification (if needed)
         "face_color": "black",  # Background color of the plot
         "line_color": "white",  # Color of the plotted lines
         "text_color": "white",  # Color of the text in the plot
         "alpha": 1.0,  # Opacity of the plotted lines
         "show_grid": False,  # Whether to show a grid on the plot
-        "legend": True,  # Whether to show a legend on the plot
+        "legend": False,  # Whether to show a legend on the plot
         "orig_background": False,  # Whether to use the original background (if applicable)
         "plot_disk_edges": True,  # Whether to plot the edges of the accretion disk
         "ax_lim": [-100, 100],  # Limits of the x and y axes
@@ -63,8 +63,10 @@ params = {
     },
 }
 
+inclination = 75 * np.pi / 180
+
 def plot_single_isoradial():
-    isoradial = Isoradial(params, radius=30 * M, inclination=80 * np.pi / 180, mass=M, order=0)
+    isoradial = Isoradial(params, radius=30 * M, inclination=inclination, mass=M, order=0)
     isoradial.calculate()
     
     plotter = IsoradialPlotter(params)
@@ -73,7 +75,7 @@ def plot_single_isoradial():
     plotter.save_plot("single_isoradial.png")
 
 def plot_isoradial_redshift():
-    isoradial = Isoradial(params, radius=30 * M, inclination=80 * np.pi / 180, mass=M, order=0)
+    isoradial = Isoradial(params, radius=30 * M, inclination=inclination, mass=M, order=0)
     isoradial.calculate()
     
     plotter = IsoradialPlotter(params)
@@ -81,10 +83,10 @@ def plot_isoradial_redshift():
     plotter.save_plot("isoradial_redshift.png")
 
 def plot_blackhole_isoradials():
-    blackhole = BlackHole(params, mass=M, inclination=85 * np.pi / 180, acc=1e-8)
+    blackhole = BlackHole(params, mass=M, inclination=inclination, acc=1e-8)
     
-    direct_r = list(range(5, 101, 5))
-    ghost_r = list(range(5, 101, 10))
+    direct_r = list(range(5, 101, 10))
+    ghost_r = list(range(5, 101, 20))
     
     blackhole.calc_isoradials(direct_r, ghost_r)
     
@@ -93,7 +95,7 @@ def plot_blackhole_isoradials():
     plotter.save_plot("blackhole_isoradials.png")
 
 def plot_blackhole_isoredshifts():
-    blackhole = BlackHole(params, mass=M, inclination=85 * np.pi / 180, acc=1e-8)
+    blackhole = BlackHole(params, mass=M, inclination=inclination, acc=1e-8)
     
     redshifts = [-0.5, -0.35, -0.15, 0.0, 0.15, 0.25, 0.5, 0.75, 1.0]
     

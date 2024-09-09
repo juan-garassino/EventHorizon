@@ -3,7 +3,9 @@
 import numpy as np
 from .base_model import BaseModel
 from ..utils.coordinates import polar_to_cartesian_lists
-from ..math.black_hole_math import ImpactParameter, PhysicalFunctions #calc_impact_parameter, redshift_factor
+from ..math.utilities import Utilities
+from ..math.impact_parameter import ImpactParameter
+from ..math.physical_functions import PhysicalFunctions
 from typing import List, Optional, Tuple
 
 class Isoradial(BaseModel):
@@ -13,6 +15,13 @@ class Isoradial(BaseModel):
         self.inclination = inclination
         self.mass = mass
         self.order = order
+        
+        # Initialize find_redshift_params
+        self.find_redshift_params = {
+            'force_redshift_solution': False,  # Default value
+            'max_force_iter': 5  # Default value
+        }
+        
         self.angles: List[float] = []
         self.radii_b: List[float] = []
         self.redshift_factors: List[float] = []
@@ -57,7 +66,7 @@ class Isoradial(BaseModel):
     def calc_redshift_factors(self):
         self.redshift_factors = [PhysicalFunctions.redshift_factor(self.radius, angle, self.inclination, self.mass, b) 
                                  for b, angle in zip(self.radii_b, self.angles)]
-        print(f"Redshift factors: {self.redshift_factors}")
+        #print(f"Redshift factors: {self.redshift_factors}")
 
     def calc_redshift_location_on_ir(self, redshift: float, cartesian: bool = False) -> Tuple[List[float], List[float]]:
         diff = [redshift + 1 - z for z in self.redshift_factors]

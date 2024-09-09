@@ -122,12 +122,15 @@ class Isoredshift(BaseModel):
                                                        angular_precision=
                                                        self.config['isoredshift_solver_parameters']['retry_angular_precision'],
                                                        mirror=False)
+        
+        print(f"Redshift solutions: a={a}, b={b}, closest_r_wo_s={closest_r_wo_s}")  # Debugging output
         if len(a) > 0:
             self._add_solutions(a, b, closest_r_wo_s)
         return a, b
 
     def _add_solutions(self, angles: List[float], impact_parameters: List[float], radius_ir: float):
         for angle, impact_parameter in zip(angles, impact_parameters):
+            print(f"Adding solution: angle={angle}, impact_parameter={impact_parameter}, radius_ir={radius_ir}")  # Debugging output
             if radius_ir in self.radii_w_coordinates_dict:
                 if len(self.radii_w_coordinates_dict[radius_ir][0]) > 0:
                     self.radii_w_coordinates_dict[radius_ir][0].append(angle)
@@ -142,7 +145,14 @@ class Isoredshift(BaseModel):
     def improve_between_all_solutions_once(self):
         self.order_coordinates()
         co = list(zip(self.angles, self.radii))
+        
+        # Debugging output
+        print("Coordinates with Radii Dict:", self.coordinates_with_radii_dict)
+        
         for b, e in zip(co[:-1], co[1:]):
+            if b not in self.coordinates_with_radii_dict or e not in self.coordinates_with_radii_dict:
+                print(f"Missing keys: {b}, {e}")
+                continue  # Skip this iteration if keys are missing
             r_inbetw = 0.5 * (self.coordinates_with_radii_dict[b] + self.coordinates_with_radii_dict[e])
             begin_angle, end_angle = b[0], e[0]
             if end_angle - begin_angle > np.pi:
@@ -186,11 +196,9 @@ class Isoredshift(BaseModel):
                                            angular_precision: int = 3, mirror: bool = False,
                                            plot_inbetween: bool = False, title: str = '',
                                            force_solution: bool = False) -> Tuple[List[float], List[float]]:
-        ir = Isoradial(self.config, radius, self.inclination, self.mass,
-                       angular_properties={'start_angle': begin_angle,
-                                           'end_angle': end_angle,
-                                           'angular_precision': angular_precision,
-                                           'mirror': mirror})
+        # Create Isoradial instance with correct parameter names
+        ir = Isoradial(config=self.config, radius=radius, inclination=begin_angle, mass=self.mass, order=0)
+
         ir.find_redshift_params['force_redshift_solution'] = force_solution
         a, r = ir.calc_redshift_location_on_ir(self.redshift, cartesian=False)
         return a, r

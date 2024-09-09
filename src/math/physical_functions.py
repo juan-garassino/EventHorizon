@@ -1,5 +1,6 @@
 import numpy as np
 import sympy as sp
+import scipy.special as scp
 import warnings
 from .numerical_functions import NumericalFunctions
 from .geometric_functions import GeometricFunctions
@@ -21,7 +22,8 @@ class PhysicalFunctions:
                 print(f"Invalid q value: {q}")
             return np.nan
 
-        ell_inf = sp.ellipkinc(z_inf, m_)
+        # Use elliptic_f instead of ellipkinc
+        ell_inf = scp.ellipkinc(z_inf, m_)
         g = np.arccos(GeometricFunctions.cos_gamma(ir_angle, incl))
 
         # Check for division by zero or invalid values
@@ -32,12 +34,12 @@ class PhysicalFunctions:
             return np.nan
 
         if n:  # higher order image
-            ell_k = sp.ellipk(m_)
+            ell_k = scp.ellipk(m_)
             ellips_arg = (g - 2. * n * np.pi) / (2. * sqrt_term) - ell_inf + 2. * ell_k
         else:  # direct image
             ellips_arg = g / (2. * sqrt_term) + ell_inf
 
-        sn, cn, dn, ph = sp.ellipj(ellips_arg, m_)
+        sn, cn, dn, ph = scp.ellipj(ellips_arg, m_)
         sn2 = sn * sn
 
         term1 = -(q - periastron + 2. * bh_mass) / (4. * bh_mass * periastron)
