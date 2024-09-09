@@ -57,7 +57,6 @@ def fast_root(
 
     return xmid
 
-
 def find_brackets(
     f: Callable,
     x: npt.NDArray[float],
