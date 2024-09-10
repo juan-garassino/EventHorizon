@@ -40,13 +40,13 @@ class Isoradial(BaseModel):
 
         angles = []
         impact_parameters = []
-        for alpha in np.linspace(start_angle, end_angle, angular_precision):
+        for calculate_alpha in np.linspace(start_angle, end_angle, angular_precision):
             b = ImpactParameter.calc_impact_parameter(
-                alpha, self.radius, self.inclination, self.order, self.mass,
+                calculate_alpha, self.radius, self.inclination, self.order, self.mass,
                 **self.config['isoradial_solver_parameters']
             )
             if b is not None:
-                angles.append(alpha)
+                angles.append(calculate_alpha)
                 impact_parameters.append(b)
         
         if self.order > 0:
@@ -91,8 +91,8 @@ class Isoradial(BaseModel):
             return polar_to_cartesian_lists(b_solutions, angle_solutions)
         return angle_solutions, b_solutions
 
-    def calc_between(self, ind: int):
-        mid_angle = 0.5 * (self.angles[ind] + self.angles[ind + 1])
+    def calc_between(self, index: int):
+        mid_angle = 0.5 * (self.angles[index] + self.angles[index + 1])
         b = ImpactParameter.calc_impact_parameter(
             mid_angle,
             self.radius,
@@ -102,6 +102,6 @@ class Isoradial(BaseModel):
             **self.config['isoradial_solver_parameters']
         )
         z = PhysicalFunctions.calculate_redshift_factor(self.radius, mid_angle, self.inclination, self.mass, b)
-        self.radii_b.insert(ind + 1, b)
-        self.angles.insert(ind + 1, mid_angle)
-        self.redshift_factors.insert(ind + 1, z)
+        self.radii_b.insert(index + 1, b)
+        self.angles.insert(index + 1, mid_angle)
+        self.redshift_factors.insert(index + 1, z)

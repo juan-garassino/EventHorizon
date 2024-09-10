@@ -1,23 +1,23 @@
 import numpy as np
 
 def polar_to_cartesian_lists(radii, angles, rotation=0):
-    x = []
-    y = []
+    x_values = []
+    y_values = []
     for R, th in zip(radii, angles):
-        x.append(R * np.cos(th + rotation))
-        y.append(R * np.sin(th + rotation))
-    return x, y
+        x_values.append(R * np.cos(th + rotation))
+        y_values.append(R * np.sin(th + rotation))
+    return x_values, y_values
 
 
 def polar_to_cartesian_single(th, radius, rotation=0):
-    x = radius * np.cos(th + rotation)
-    y = radius * np.sin(th + rotation)
-    return x, y
+    x_values = radius * np.cos(th + rotation)
+    y_values = radius * np.sin(th + rotation)
+    return x_values, y_values
 
 
-def cartesian_to_polar(x, y):
-    R = np.sqrt(x * x + y * y)
-    th = np.arctan2(y, x)
+def cartesian_to_polar(x_values, y_values):
+    R = np.sqrt(x_values * x_values + y_values * y_values)
+    th = np.arctan2(y_values, x_values)
     th = th if th > 0 else th + 2 * np.pi
     return th, R
 
@@ -26,15 +26,15 @@ def get_angle_around(p1, p2):
     """
     Calculates the angle of p2 around p1
 
-    :param p1: coordinate 1 in format [x, y]
-    :param p2:  coordinate 2 in format [x, y]
+    :param p1: coordinate 1 in format [x_values, y_values]
+    :param p2:  coordinate 2 in format [x_values, y_values]
     :return: angle in radians
     """
     cx, cy = p1
 
     p2_ = np.subtract(p2, p1)
     angle_center, _ = cartesian_to_polar(cx, cy)
-    # rotate p2_ counter-clockwise until the vector to the isoradial center is aligned with negative y-axis
+    # rotate p2_ counter-clockwise until the vector to the isoradial center is aligned with negative y_values-axis
     theta = np.pi - angle_center if angle_center > np.pi else angle_center
     rot = np.array([[np.cos(theta), -np.sin(theta)],
                     [np.sin(theta), np.cos(theta)]])

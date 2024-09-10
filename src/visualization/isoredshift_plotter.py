@@ -10,7 +10,7 @@ class IsoredshiftPlotter(BasePlotter):
         if ax is None:
             ax = self.ax
         
-        ax.plot(isoredshift.y, [-e for e in isoredshift.x], color=color)
+        ax.plot(isoredshift.y_values, [-e for e in isoredshift.x_values], color=color)
         return ax
 
     def plot_with_improvement(self, isoredshift: Isoredshift, ax: Optional[plt.Axes] = None, 

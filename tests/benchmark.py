@@ -22,7 +22,7 @@ def benchmark(th0: float, r_values: npt.NDArray[float], n_vals: Iterable[int]):
     n_vals : Iterable[int]
         Order of the calculations
     """
-    alpha = np.linspace(0, 2 * np.pi, 1000)
+    calculate_alpha = np.linspace(0, 2 * np.pi, 1000)
     theta_0 = th0 * np.pi / 180
 
     isoradials = []
@@ -30,8 +30,8 @@ def benchmark(th0: float, r_values: npt.NDArray[float], n_vals: Iterable[int]):
         for image_order in sorted(n_vals)[::-1]:
             isoradials.append(
                 Isoradial(
-                    bh.reorient_alpha(alpha, image_order),
-                    bh.impact_parameter(alpha, radius, theta_0, image_order, 1),
+                    bh.reorient_alpha(calculate_alpha, image_order),
+                    bh.impact_parameter(calculate_alpha, radius, theta_0, image_order, 1),
                     radius,
                     theta_0,
                     image_order,

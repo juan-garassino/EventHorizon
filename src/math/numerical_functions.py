@@ -46,14 +46,14 @@ class NumericalFunctions:
     @staticmethod
     def calculate_elliptic_integral_modulus(periastron: float, black_hole_mass: float, verbose: bool = False) -> float:
         """Calculate modulus of elliptic integral."""
-        q = NumericalFunctions.calculate_q_parameter(periastron, black_hole_mass, verbose)
+        q_parameter = NumericalFunctions.calculate_q_parameter(periastron, black_hole_mass, verbose)
         if verbose:
-            print(f"calculate_elliptic_integral_modulus: periastron={periastron}, black_hole_mass={black_hole_mass}, q={q}")
-        if np.isnan(q) or q == 0:
+            print(f"calculate_elliptic_integral_modulus: periastron={periastron}, black_hole_mass={black_hole_mass}, q_parameter={q_parameter}")
+        if np.isnan(q_parameter) or q_parameter == 0:
             if verbose:
-                print("Invalid q value or division by zero")
+                print("Invalid q_parameter value or division by zero")
             return np.nan
-        result = np.sqrt((q - periastron + 6 * black_hole_mass) / (2 * q))
+        result = np.sqrt((q_parameter - periastron + 6 * black_hole_mass) / (2 * q_parameter))
         if verbose:
             print(f"calculate_elliptic_integral_modulus result: {result}")
         return result
@@ -61,14 +61,14 @@ class NumericalFunctions:
     @staticmethod
     def calculate_squared_elliptic_integral_modulus(periastron: float, black_hole_mass: float, verbose: bool = False) -> float:
         """Calculate the squared modulus of elliptic integral."""
-        q = NumericalFunctions.calculate_q_parameter(periastron, black_hole_mass, verbose)
+        q_parameter = NumericalFunctions.calculate_q_parameter(periastron, black_hole_mass, verbose)
         if verbose:
-            print(f"calculate_squared_elliptic_integral_modulus: periastron={periastron}, black_hole_mass={black_hole_mass}, q={q}")
-        if np.isnan(q) or q == 0:
+            print(f"calculate_squared_elliptic_integral_modulus: periastron={periastron}, black_hole_mass={black_hole_mass}, q_parameter={q_parameter}")
+        if np.isnan(q_parameter) or q_parameter == 0:
             if verbose:
-                print("Invalid q value or division by zero")
+                print("Invalid q_parameter value or division by zero")
             return np.nan
-        result = (q - periastron + 6 * black_hole_mass) / (2 * q)
+        result = (q_parameter - periastron + 6 * black_hole_mass) / (2 * q_parameter)
         if verbose:
             print(f"calculate_squared_elliptic_integral_modulus result: {result}")
         return result
@@ -76,14 +76,14 @@ class NumericalFunctions:
     @staticmethod
     def calculate_zeta_infinity(periastron: float, black_hole_mass: float, verbose: bool = False) -> float:
         """Calculate Zeta_inf for elliptic integral F(Zeta_inf, calculate_elliptic_integral_modulus)."""
-        q = NumericalFunctions.calculate_q_parameter(periastron, black_hole_mass, verbose)
+        q_parameter = NumericalFunctions.calculate_q_parameter(periastron, black_hole_mass, verbose)
         if verbose:
-            print(f"calculate_zeta_infinity: periastron={periastron}, black_hole_mass={black_hole_mass}, q={q}")
-        if np.isnan(q) or (q - periastron + 6 * black_hole_mass) == 0:
+            print(f"calculate_zeta_infinity: periastron={periastron}, black_hole_mass={black_hole_mass}, q_parameter={q_parameter}")
+        if np.isnan(q_parameter) or (q_parameter - periastron + 6 * black_hole_mass) == 0:
             if verbose:
-                print("Invalid q value or division by zero")
+                print("Invalid q_parameter value or division by zero")
             return np.nan
-        arg = (q - periastron + 2 * black_hole_mass) / (q - periastron + 6 * black_hole_mass)
+        arg = (q_parameter - periastron + 2 * black_hole_mass) / (q_parameter - periastron + 6 * black_hole_mass)
         if not (0 <= arg <= 1):
             if verbose:
                 print(f"calculate_zeta_infinity: Invalid argument for asin={arg}")
@@ -96,17 +96,17 @@ class NumericalFunctions:
     @staticmethod
     def calculate_zeta_radius(periastron: float, radius: float, black_hole_mass: float, verbose: bool = False) -> float:
         """Calculate the elliptic integral argument Zeta_r for argument given value of P and radius."""
-        q = NumericalFunctions.calculate_q_parameter(periastron, black_hole_mass, verbose)
+        q_parameter = NumericalFunctions.calculate_q_parameter(periastron, black_hole_mass, verbose)
         if verbose:
-            print(f"calculate_zeta_radius: periastron={periastron}, radius={radius}, black_hole_mass={black_hole_mass}, q={q}")
-        if not NumericalFunctions.validate_parameters(periastron, black_hole_mass, verbose) or np.isnan(q):
+            print(f"calculate_zeta_radius: periastron={periastron}, radius={radius}, black_hole_mass={black_hole_mass}, q_parameter={q_parameter}")
+        if not NumericalFunctions.validate_parameters(periastron, black_hole_mass, verbose) or np.isnan(q_parameter):
             return np.nan
-        denominator = q - periastron + 6 * black_hole_mass
+        denominator = q_parameter - periastron + 6 * black_hole_mass
         if denominator == 0:
             if verbose:
                 print("Division by zero")
             return np.nan
-        argument = (q - periastron + 2 * black_hole_mass + (4 * black_hole_mass * periastron) / radius) / denominator
+        argument = (q_parameter - periastron + 2 * black_hole_mass + (4 * black_hole_mass * periastron) / radius) / denominator
         if not (0 <= argument <= 1):
             if verbose:
                 print(f"calculate_zeta_radius: Invalid argument for asin={argument}")

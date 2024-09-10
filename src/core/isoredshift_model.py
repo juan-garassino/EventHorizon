@@ -19,8 +19,8 @@ class Isoredshift(BaseModel):
         self.ir_radii_w_co: List[float] = []
         self.angles: List[float] = []
         self.radii: List[float] = []
-        self.x: List[float] = []
-        self.y: List[float] = []
+        self.x_values: List[float] = []
+        self.y_values: List[float] = []
         self.max_radius: float = 0
 
         if isoradials is not None:
@@ -39,26 +39,26 @@ class Isoredshift(BaseModel):
         r_w_s, r_wo_s = self.split_co_on_solutions()
         if len(r_w_s) > 0:
             self.recalc_isoradials_wo_redshift_solutions(plot_inbetween=False)
-            self.improve_tip(iterations=self.config["isoredshift_solver_parameters"]["retry_tip"])
+            self.improve_tip(iteration_count=self.config["isoredshift_solver_parameters"]["retry_tip"])
             for image_order in range(self.config["isoredshift_solver_parameters"]["times_inbetween"]):
                 self.improve_between_all_solutions_once()
                 self.order_coordinates(plot_title="calculating inbetween",
                                        plot_inbetween=self.config["isoredshift_solver_parameters"]["plot_inbetween"])
 
     def split_co_on_jump(self, threshold: float = 2):
-        def dist(x, y):
-            x1, x2 = x
-            y1, y2 = y
+        def dist(x_values, y_values):
+            x1, x2 = x_values
+            y1, y2 = y_values
             return np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
 
         self.order_coordinates()
         self._update()
-        x, y = polar_to_cartesian_lists(self.radii, self.angles)
-        distances = [dist((x1, x2), (y1, y2)) for x1, x2, y1, y2 in zip(x[:-1], x[1:], y[:-1], y[1:])]
+        x_values, y_values = polar_to_cartesian_lists(self.radii, self.angles)
+        distances = [dist((x1, x2), (y1, y2)) for x1, x2, y1, y2 in zip(x_values[:-1], x_values[1:], y_values[:-1], y_values[1:])]
         mx2, mx = sorted(distances)[-2:]
         if mx > threshold * mx2:
             split_ind = np.where(distances == mx)[0][0]
-            if not abs(np.diff(np.sign(self.x[split_ind:split_ind + 2]))) > 0:
+            if not abs(np.diff(np.sign(self.x_values[split_ind:split_ind + 2]))) > 0:
                 split_ind = None
         else:
             split_ind = None
@@ -67,7 +67,7 @@ class Isoredshift(BaseModel):
     def _update(self):
         self.ir_radii_w_co = [key for key, val in self.radii_w_coordinates_dict.items() if len(val[0]) > 0]
         self.angles, self.radii = self._extract_co_from_solutions_dict()
-        self.x, self.y = polar_to_cartesian_lists(self.radii, self.angles, rotation=0)
+        self.x_values, self.y_values = polar_to_cartesian_lists(self.radii, self.angles, rotation=0)
         self.order_coordinates()
 
     def _extract_co_from_solutions_dict(self) -> Tuple[List[float], List[float]]:
@@ -82,15 +82,15 @@ class Isoredshift(BaseModel):
 
     def order_coordinates(self, plot_title: str = "", plot_inbetween: bool = False):
         co = list(zip(self.angles, self.radii))
-        x, y = polar_to_cartesian_lists(self.radii, self.angles)
-        cx, cy = np.mean(x), np.mean(y)
+        x_values, y_values = polar_to_cartesian_lists(self.radii, self.angles)
+        cx, cy = np.mean(x_values), np.mean(y_values)
         order_around = [0.3 * cx, 0.8 * cy]
 
         sorted_co = sorted(co, key=lambda polar_point: get_angle_around(order_around, 
                                                                         polar_to_cartesian_single(*polar_point)))
 
         self.angles, self.radii = [e[0] for e in sorted_co], [e[1] for e in sorted_co]
-        self.x, self.y = polar_to_cartesian_lists(self.radii, self.angles, rotation=0)
+        self.x_values, self.y_values = polar_to_cartesian_lists(self.radii, self.angles, rotation=0)
 
     def split_co_on_solutions(self) -> Tuple[Dict[float, List[List[float]]], Dict[float, List[List[float]]]]:
         keys_w_s = [key for key, val in self.radii_w_coordinates_dict.items() if len(val[0]) > 0]
@@ -164,10 +164,10 @@ class Isoredshift(BaseModel):
             if len(argument) > 0:
                 self._add_solutions(argument, radius, r_inbetw)
 
-    def improve_tip(self, iterations: int = 6):
+    def improve_tip(self, iteration_count: int = 6):
         r_w_so, r_wo_s = self.split_co_on_solutions()
         if len(r_wo_s) > 0:
-            for it in range(iterations):
+            for it in range(iteration_count):
                 self.calc_ir_before_closest_ir_wo_z()
                 self.order_coordinates(plot_title=f"Improving tip iteration {it}",
                                        plot_inbetween=self.config["isoredshift_solver_parameters"]["plot_inbetween"])

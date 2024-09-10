@@ -42,9 +42,9 @@ if __name__ == "__main__":
     # TODO: Add visualization code here
     # For example:
     plt.figure(figsize=(10, 8))
-    plt.scatter(image_data['x'], image_data['y'], c=image_data['flux'], cmap='viridis')
+    plt.scatter(image_data['x_values'], image_data['y_values'], c=image_data['flux'], cmap='viridis')
     plt.colorbar(label='Flux')
-    plt.xlabel('x')
-    plt.ylabel('y')
+    plt.xlabel('x_values')
+    plt.ylabel('y_values')
     plt.title('Black Hole Accretion Disk Simulation')
     plt.show()

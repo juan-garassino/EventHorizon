@@ -10,14 +10,14 @@ from ..visualization.isoredshift_plotter import IsoredshiftPlotter
 
 class BlackHolePlotter(BasePlotter):
     def plot_photon_sphere(self, black_hole: BlackHole, c: str = '--'):
-        x, y = black_hole.disk_inner_edge.X, black_hole.disk_inner_edge.Y
-        self.ax.plot(x, y, color=c, zorder=0)
+        x_values, y_values = black_hole.disk_inner_edge.X, black_hole.disk_inner_edge.Y
+        self.ax.plot(x_values, y_values, color=c, zorder=0)
         return self.ax
 
     def plot_apparent_inner_edge(self, black_hole: BlackHole, linestyle: str = '--'):
         if hasattr(black_hole, 'disk_apparent_inner_edge'):
-            x, y = black_hole.disk_apparent_inner_edge.X, black_hole.disk_apparent_inner_edge.Y
-            self.ax.plot(x, y, zorder=0, linestyle=linestyle, linewidth=2. * self.config['plot_params']["linewidth"])
+            x_values, y_values = black_hole.disk_apparent_inner_edge.X, black_hole.disk_apparent_inner_edge.Y
+            self.ax.plot(x_values, y_values, zorder=0, linestyle=linestyle, linewidth=2. * self.config['plot_params']["linewidth"])
         else:
             print("Warning: Black hole does not have argument disk_apparent_inner_edge attribute.")
         return self.ax
@@ -27,11 +27,11 @@ class BlackHolePlotter(BasePlotter):
 
         for radius in sorted(ghost_r):
             isoradial = black_hole.isoradials[radius][1]
-            self.plot_isoradial(isoradial, color_range=(-1, 1), alpha=0.5)
+            self.plot_isoradial(isoradial, color_range=(-1, 1), calculate_alpha=0.5)
 
         for radius in sorted(direct_r):
             isoradial = black_hole.isoradials[radius][0]  
-            self.plot_isoradial(isoradial, color_range=(-1, 1), alpha=1.0)
+            self.plot_isoradial(isoradial, color_range=(-1, 1), calculate_alpha=1.0)
 
         if self.config['plot_params']['plot_core']:
             self.plot_apparent_inner_edge(black_hole, '--')
@@ -53,9 +53,9 @@ class BlackHolePlotter(BasePlotter):
 
         return self.fig, self.ax
         
-    def plot_isoradial(self, isoradial: Isoradial, color_range: Tuple[float, float] = (0, 1), alpha: float = 1.0):
+    def plot_isoradial(self, isoradial: Isoradial, color_range: Tuple[float, float] = (0, 1), calculate_alpha: float = 1.0):
         isoradial_plotter = IsoradialPlotter(self.config)
-        isoradial_plotter.plot(isoradial, ax=self.ax, colornorm=color_range, alpha=alpha)
+        isoradial_plotter.plot(isoradial, ax=self.ax, colornorm=color_range, calculate_alpha=calculate_alpha)
 
     def plot_isoredshifts(self, black_hole: BlackHole, redshifts: Optional[List[float]] = None, plot_core: bool = False):
         if redshifts is None:

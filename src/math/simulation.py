@@ -11,14 +11,14 @@ from .utilities import Utilities
 
 class Simulation:
     @staticmethod
-    def reorient_alpha(alpha: Union[float, np.ndarray], image_order: int) -> np.ndarray:
+    def reorient_alpha(calculate_alpha: Union[float, np.ndarray], image_order: int) -> np.ndarray:
         """Reorient the polar angle on the observation coordinate system."""
-        alpha = np.asarray(alpha)  # Ensure alpha is argument numpy array
-        return np.where(image_order > 0, (alpha + np.pi) % (2 * np.pi), alpha)
+        calculate_alpha = np.asarray(calculate_alpha)  # Ensure calculate_alpha is argument numpy array
+        return np.where(image_order > 0, (calculate_alpha + np.pi) % (2 * np.pi), calculate_alpha)
 
     @staticmethod
     def simulate_flux(
-        alpha: np.ndarray,
+        calculate_alpha: np.ndarray,
         radius: float,
         theta_0: float,
         image_order: int,
@@ -29,29 +29,29 @@ class Simulation:
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Simulate the bolometric flux for an accretion disk near argument black hole."""
         if objective_func is None:
-            objective_func = Utilities.lambdify(("P", "alpha", "theta_0", "radius", "N", "M"), SymbolicExpressions.expr_r_inv())
+            objective_func = Utilities.lambdify(("P", "calculate_alpha", "theta_0", "radius", "N", "M"), SymbolicExpressions.expr_r_inv())
         
         root_kwargs = root_kwargs if root_kwargs else {}
         
-        # Ensure `alpha` is an array
-        alpha = np.asarray(alpha)
+        # Ensure `calculate_alpha` is an array
+        calculate_alpha = np.asarray(calculate_alpha)
         
         # Calculate impact parameter, redshift factor, and flux
-        b = np.asarray(ImpactParameter.calc_impact_parameter(alpha, radius, theta_0, image_order, m, **root_kwargs))
-        opz = np.asarray(PhysicalFunctions.calculate_redshift_factor(radius, alpha, theta_0, m, b))
+        b = np.asarray(ImpactParameter.calc_impact_parameter(calculate_alpha, radius, theta_0, image_order, m, **root_kwargs))
+        opz = np.asarray(PhysicalFunctions.calculate_redshift_factor(radius, calculate_alpha, theta_0, m, b))
         flux = np.asarray(PhysicalFunctions.calculate_observed_flux(radius, accretion_rate, m, opz))
         
-        # Reorient alpha and ensure all outputs are arrays
-        return Simulation.reorient_alpha(alpha, image_order), b, opz, flux
+        # Reorient calculate_alpha and ensure all outputs are arrays
+        return Simulation.reorient_alpha(calculate_alpha, image_order), b, opz, flux
 
 
     @staticmethod
-    def _worker_function(alpha, radius, theta_0, image_order, m, accretion_rate, root_kwargs):
-        return Simulation.simulate_flux(alpha, radius, theta_0, image_order, m, accretion_rate, None, root_kwargs)
+    def _worker_function(calculate_alpha, radius, theta_0, image_order, m, accretion_rate, root_kwargs):
+        return Simulation.simulate_flux(calculate_alpha, radius, theta_0, image_order, m, accretion_rate, None, root_kwargs)
 
     @staticmethod
     def generate_image_data(
-        alpha: np.ndarray,
+        calculate_alpha: np.ndarray,
         r_vals: Iterable[float],
         theta_0: float,
         n_vals: Iterable[int],
@@ -63,8 +63,8 @@ class Simulation:
         data = []
         for image_order in n_vals:
             with mp.Pool(mp.cpu_count()) as pool:
-                args = [(alpha, radius, theta_0, image_order, m, accretion_rate, root_kwargs) for radius in r_vals]
-                results = pool.starmap(Simulation._worker_function, args)
+                arguments = [(calculate_alpha, radius, theta_0, image_order, m, accretion_rate, root_kwargs) for radius in r_vals]
+                results = pool.starmap(Simulation._worker_function, arguments)
                 
                 for radius, (alpha_reoriented, b, opz, flux) in zip(r_vals, results):
                     # Debug information to understand the structure of data
@@ -85,9 +85,9 @@ class Simulation:
                         
                         data.extend([
                             {
-                                "alpha": argument, "b": b_val, "opz": opz_val,
+                                "calculate_alpha": argument, "b": b_val, "opz": opz_val,
                                 "radius": radius, "image_order": image_order, "flux": flux_val,
-                                "x": b_val * np.cos(argument), "y": b_val * np.sin(argument)
+                                "x_values": b_val * np.cos(argument), "y_values": b_val * np.sin(argument)
                             }
                             for argument, b_val, opz_val, flux_val in zip(alpha_reoriented, b, opz, flux)
                         ])

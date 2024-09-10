@@ -51,7 +51,7 @@ def generate_isoradials(
     ax.set_theta_zero_location("S")
     ax.set_axis_off()
 
-    alpha = np.linspace(0, 2 * np.pi, 1000)
+    calculate_alpha = np.linspace(0, 2 * np.pi, 1000)
     theta_0 = th0 * np.pi / 180
 
     if cmap is None:
@@ -65,21 +65,21 @@ def generate_isoradials(
                 linecolor = color
 
             iso = Isoradial(
-                bh.reorient_alpha(alpha, image_order),
-                bh.impact_parameter(alpha, radius, theta_0, image_order=image_order, m=1),
+                bh.reorient_alpha(calculate_alpha, image_order),
+                bh.impact_parameter(calculate_alpha, radius, theta_0, image_order=image_order, m=1),
                 radius,
                 theta_0,
                 image_order,
             )
 
-            ax.plot(iso.alpha, iso.b, color=linecolor)
+            ax.plot(iso.calculate_alpha, iso.b, color=linecolor)
 
     return fig
 
 
 def generate_scatter_image(
     ax: Optional[matplotlib.axes.Axes],
-    alpha: npt.NDArray[float],
+    calculate_alpha: npt.NDArray[float],
     r_vals: npt.NDArray[float],
     th0: float,
     n_vals: Iterable[int],
@@ -92,7 +92,7 @@ def generate_scatter_image(
     ----------
     ax : Optional[matplotlib.axes.Axes]
         Axes on which the image is to be drawn
-    alpha: npt.NDArray[float]
+    calculate_alpha: npt.NDArray[float]
         Polar angles for which the flux is to be plotted
     r_vals : npt.NDArray[float]
         Distances from the black hole center to the isoradials to be plotted
@@ -111,7 +111,7 @@ def generate_scatter_image(
         Image of the given black hole isoradials.
     """
     theta_0 = th0 * np.pi / 180
-    df = bh.generate_image_data(alpha, r_vals, theta_0, n_vals, m, {"max_steps": 3})
+    df = bh.generate_image_data(calculate_alpha, r_vals, theta_0, n_vals, m, {"max_steps": 3})
 
     if ax is None:
         fig, ax = plt.subplots(figsize=(10, 10), subplot_kw={"projection": "polar"})
@@ -125,13 +125,13 @@ def generate_scatter_image(
     ax.set_axis_off()
     for image_order in sorted(n_vals, reverse=True):
         df_n = df.loc[df["image_order"] == image_order]
-        ax.scatter(df_n["alpha"], df_n["b"], c=df_n["flux"], cmap=cmap)
+        ax.scatter(df_n["calculate_alpha"], df_n["b"], c=df_n["flux"], cmap=cmap)
     return fig
 
 
 def generate_image(
     ax: Optional[matplotlib.axes.Axes],
-    alpha: npt.NDArray[float],
+    calculate_alpha: npt.NDArray[float],
     r_vals: npt.NDArray[float],
     th0: float,
     n_vals: Iterable[int],
@@ -144,7 +144,7 @@ def generate_image(
     ----------
     ax : Optional[matplotlib.axes.Axes]
         Axes on which the image is to be drawn
-    alpha: npt.NDArray[float]
+    calculate_alpha: npt.NDArray[float]
         Polar angles for which the flux is to be plotted
     r_vals : npt.NDArray[float]
         Distances from the black hole center to the isoradials to be plotted
@@ -163,15 +163,15 @@ def generate_image(
         Image of the given black hole isoradials.
     """
     theta_0 = th0 * np.pi / 180
-    df = bh.generate_image_data(alpha, r_vals, theta_0, n_vals, m, {"max_steps": 3})
+    df = bh.generate_image_data(calculate_alpha, r_vals, theta_0, n_vals, m, {"max_steps": 3})
 
     if ax is None:
         _, ax = plt.subplots(figsize=(30, 30))
 
     ax.set_axis_off()
 
-    minx, maxx = df["x"].min(), df["x"].max()
-    miny, maxy = df["y"].min(), df["y"].max()
+    minx, maxx = df["x_values"].min(), df["x_values"].max()
+    miny, maxy = df["y_values"].min(), df["y_values"].max()
 
     xx, yy = np.meshgrid(
         np.linspace(minx, maxx, 10000),
@@ -183,7 +183,7 @@ def generate_image(
     for image_order in n_vals:
         df_n = df.loc[df["image_order"] == image_order]
         fluxgrid_n = si.griddata(
-            (df_n["x"], df_n["y"]), df_n["flux"], (xx, yy), method="linear"
+            (df_n["x_values"], df_n["y_values"]), df_n["flux"], (xx, yy), method="linear"
         )
         fluxgrid[fluxgrid == 0] += fluxgrid_n[fluxgrid == 0]
 

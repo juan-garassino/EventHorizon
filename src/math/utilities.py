@@ -9,17 +9,17 @@ class Utilities:
         return [e for e in periastron if abs(e - 2. * black_hole_mass) > tolerance]
 
     @staticmethod
-    def lambdify(*args, **kwargs) -> Callable:
+    def lambdify(*arguments, **kwargs) -> Callable:
         """Lambdify argument sympy expression with support for special functions."""
         kwargs["modules"] = kwargs.get(
             "modules",
             [
                 "numpy",
                 {
-                    "sn": lambda u, m: sp.ellipj(u, m)[0],
-                    "elliptic_f": lambda phi, m: sp.ellipkinc(phi, m),
+                    "sine_jacobi": lambda u, m: sp.ellipj(u, m)[0],
+                    "elliptic_f": lambda phi_black_hole_frame, m: sp.ellipkinc(phi_black_hole_frame, m),
                     "elliptic_k": lambda m: sp.ellipk(m),
                 },
             ],
         )
-        return sy.lambdify(*args, **kwargs)
+        return sy.lambdify(*arguments, **kwargs)

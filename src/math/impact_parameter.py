@@ -18,20 +18,20 @@ class ImpactParameter:
         initial_guesses: int = 20,
         use_ellipse: bool = True
     ) -> np.ndarray:
-        """Calculate the impact parameter for given alpha values."""
+        """Calculate the impact parameter for given calculate_alpha values."""
         # Ensure alpha_val is argument numpy array
         alpha_val = np.asarray(alpha_val)
         
         # Vectorized function to handle each element
-        def calc_b(alpha):
-            periastron_solution = Optimization.calc_periastron(r_value, theta_0_val, alpha, m, midpoint_iterations, plot_inbetween, image_order, min_periastron, initial_guesses)
+        def calc_b(calculate_alpha):
+            periastron_solution = Optimization.calculate_periastron(r_value, theta_0_val, calculate_alpha, m, midpoint_iterations, plot_inbetween, image_order, min_periastron, initial_guesses)
             
             if periastron_solution is None or periastron_solution <= 2*m:
-                return GeometricFunctions.ellipse(r_value, alpha, theta_0_val) if use_ellipse else np.nan
+                return GeometricFunctions.calculate_ellipse_radius(r_value, calculate_alpha, theta_0_val) if use_ellipse else np.nan
             elif periastron_solution > 2*m:
                 return NumericalFunctions.calculate_impact_parameter(periastron_solution, m)
             else:
-                raise ValueError(f"No solution was found for the periastron at (radius, argument) = ({r_value}, {alpha}) and inclination={theta_0_val}")
+                raise ValueError(f"No solution was found for the periastron at (radius, argument) = ({r_value}, {calculate_alpha}) and inclination={theta_0_val}")
         
         # Apply the function element-wise
         vectorized_calc_b = np.vectorize(calc_b)

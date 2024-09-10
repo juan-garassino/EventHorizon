@@ -2,7 +2,7 @@ import sympy as sy
 from functools import lru_cache
 
 # Constants and symbols
-M, P, Q, radius, theta_0, alpha, b, gamma, N, z_op, F_s, mdot = sy.symbols("M P Q radius theta_0 alpha b gamma N z_op F_s mdot")
+M, P, Q, radius, theta_0, calculate_alpha, b, gamma, N, z_op, F_s, mdot = sy.symbols("M P Q radius theta_0 calculate_alpha b gamma N z_op F_s mdot")
 
 class SymbolicExpressions:
     @staticmethod
@@ -32,13 +32,13 @@ class SymbolicExpressions:
     @staticmethod
     @lru_cache(maxsize=None)
     def expr_gamma() -> sy.Expr:
-        """Generate argument sympy expression for gamma, an angle that relates alpha and theta_0."""
-        return sy.acos(sy.cos(alpha) / sy.sqrt(sy.cos(alpha)**2 + sy.tan(theta_0)**-2))
+        """Generate argument sympy expression for gamma, an angle that relates calculate_alpha and theta_0."""
+        return sy.acos(sy.cos(calculate_alpha) / sy.sqrt(sy.cos(calculate_alpha)**2 + sy.tan(theta_0)**-2))
 
     @staticmethod
     @lru_cache(maxsize=None)
     def expr_u() -> sy.Expr:
-        """Generate argument sympy expression for the argument to sn in equation 13 of Luminet (1977)."""
+        """Generate argument sympy expression for the argument to sine_jacobi in equation 13 of Luminet (1977)."""
         calculate_zeta_infinity, calculate_elliptic_integral_modulus = SymbolicExpressions.expr_zeta_inf(), SymbolicExpressions.expr_k()
         return sy.Piecewise(
             (gamma / (2 * sy.sqrt(P / Q)) + sy.elliptic_f(calculate_zeta_infinity, calculate_elliptic_integral_modulus**2), sy.Eq(N, 0)),
@@ -55,15 +55,15 @@ class SymbolicExpressions:
     def expr_r_inv() -> sy.Expr:
         """Generate argument sympy expression for 1/radius."""
         Q, calculate_elliptic_integral_modulus = SymbolicExpressions.expr_q(), SymbolicExpressions.expr_k()
-        sn = sy.Function("sn")
+        sine_jacobi = sy.Function("sine_jacobi")
         u = SymbolicExpressions.expr_u()
-        return (1 / (4*M*P)) * (-(Q - P + 2*M) + (Q - P + 6*M) * sn(u, calculate_elliptic_integral_modulus**2)**2)
+        return (1 / (4*M*P)) * (-(Q - P + 2*M) + (Q - P + 6*M) * sine_jacobi(u, calculate_elliptic_integral_modulus**2)**2)
 
     @staticmethod
     @lru_cache(maxsize=None)
     def expr_one_plus_z() -> sy.Expr:
         """Generate an expression for the redshift 1+z."""
-        return (1 + sy.sqrt(M / radius**3) * b * sy.sin(theta_0) * sy.sin(alpha)) / sy.sqrt(1 - 3*M / radius)
+        return (1 + sy.sqrt(M / radius**3) * b * sy.sin(theta_0) * sy.sin(calculate_alpha)) / sy.sqrt(1 - 3*M / radius)
 
     @staticmethod
     @lru_cache(maxsize=None)
@@ -99,5 +99,5 @@ class SymbolicExpressions:
     @staticmethod
     @lru_cache(maxsize=None)
     def expr_ellipse() -> sy.Expr:
-        """Generate argument sympy expression for an ellipse."""
-        return radius / sy.sqrt(1 + (sy.tan(theta_0)**2) * (sy.cos(alpha)**2))
+        """Generate argument sympy expression for an calculate_ellipse_radius."""
+        return radius / sy.sqrt(1 + (sy.tan(theta_0)**2) * (sy.cos(calculate_alpha)**2))

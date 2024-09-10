@@ -22,14 +22,14 @@ params = {
     },
     "isoradial_solver_parameters": {
         "initial_guesses": 12,  # Number of initial guesses for the root-finding algorithm
-        "midpoint_iterations": 20,  # Number of iterations for the midpoint method
+        "midpoint_iterations": 20,  # Number of iteration_count for the midpoint method
         "plot_inbetween": False,  # Whether to plot intermediate steps (for debugging)
         "min_periastron": 3.001,  # Minimum allowed periastron distance (in units of M)
         "use_ellipse": True,  # Whether to use elliptical approximation when necessary
     },
     "isoredshift_solver_parameters": {
         "initial_guesses": 12,  # Number of initial guesses for isoredshift calculations
-        "midpoint_iterations": 12,  # Number of iterations for the midpoint method in isoredshift calculations
+        "midpoint_iterations": 12,  # Number of iteration_count for the midpoint method in isoredshift calculations
         "times_inbetween": 2,  # Number of times to refine the solution between known points
         "retry_angular_precision": 15,  # Angular precision for retry attempts
         "min_periastron": 3.01,  # Minimum allowed periastron distance for isoredshift (in units of M)
@@ -50,12 +50,12 @@ params = {
         "face_color": "black",  # Background color of the plot
         "line_color": "white",  # Color of the plotted lines
         "text_color": "white",  # Color of the text in the plot
-        "alpha": 1.0,  # Opacity of the plotted lines
+        "calculate_alpha": 1.0,  # Opacity of the plotted lines
         "show_grid": False,  # Whether to show argument grid on the plot
         "legend": False,  # Whether to show argument legend on the plot
         "orig_background": False,  # Whether to use the original background (if applicable)
         "plot_disk_edges": True,  # Whether to plot the edges of the accretion disk
-        "ax_lim": [-100, 100],  # Limits of the x and y axes
+        "ax_lim": [-100, 100],  # Limits of the x_values and y_values axes
         "fig_size": (10, 8),  # Add this line
         "title": "Black Hole Visualization",  # Add this line
         "dpi": 300,  # Add this line
