@@ -2,7 +2,7 @@ import sympy as sy
 from functools import lru_cache
 
 # Constants and symbols
-M, P, Q, radius, theta_0, calculate_alpha, b, gamma, N, z_op, F_s, mdot = sy.symbols("M P Q radius theta_0 calculate_alpha b gamma N z_op F_s mdot")
+M, P, Q, radius, theta_0, calculate_alpha, impact_parameters, gamma, N, z_op, F_s, mdot = sy.symbols("M P Q radius theta_0 calculate_alpha impact_parameters gamma N z_op F_s mdot")
 
 class SymbolicExpressions:
     @staticmethod
@@ -14,7 +14,7 @@ class SymbolicExpressions:
     @staticmethod
     @lru_cache(maxsize=None)
     def expr_b() -> sy.Expr:
-        """Generate argument sympy expression for b, the radial coordinate in the observer's frame."""
+        """Generate argument sympy expression for impact_parameters, the radial coordinate in the observer's frame."""
         return sy.sqrt((P**3) / (P - 2*M))
 
     @staticmethod
@@ -63,7 +63,7 @@ class SymbolicExpressions:
     @lru_cache(maxsize=None)
     def expr_one_plus_z() -> sy.Expr:
         """Generate an expression for the redshift 1+z."""
-        return (1 + sy.sqrt(M / radius**3) * b * sy.sin(theta_0) * sy.sin(calculate_alpha)) / sy.sqrt(1 - 3*M / radius)
+        return (1 + sy.sqrt(M / radius**3) * impact_parameters * sy.sin(theta_0) * sy.sin(calculate_alpha)) / sy.sqrt(1 - 3*M / radius)
 
     @staticmethod
     @lru_cache(maxsize=None)

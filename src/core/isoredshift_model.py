@@ -118,15 +118,15 @@ class Isoredshift(BaseModel):
         begin_angle, end_angle = angle_interval
         if end_angle - begin_angle > np.pi:
             begin_angle, end_angle = end_angle, begin_angle
-        argument, b = self.calc_redshift_on_ir_between_angles(closest_r_wo_s, begin_angle, end_angle,
+        argument, impact_parameters = self.calc_redshift_on_ir_between_angles(closest_r_wo_s, begin_angle, end_angle,
                                                        angular_precision=
                                                        self.config['isoredshift_solver_parameters']['retry_angular_precision'],
                                                        mirror=False)
         
-        print(f"Redshift solutions: argument={argument}, b={b}, closest_r_wo_s={closest_r_wo_s}")  # Debugging output
+        print(f"Redshift solutions: argument={argument}, impact_parameters={impact_parameters}, closest_r_wo_s={closest_r_wo_s}")  # Debugging output
         if len(argument) > 0:
-            self._add_solutions(argument, b, closest_r_wo_s)
-        return argument, b
+            self._add_solutions(argument, impact_parameters, closest_r_wo_s)
+        return argument, impact_parameters
 
     def _add_solutions(self, angles: List[float], impact_parameters: List[float], radius_ir: float):
         for angle, impact_parameter in zip(angles, impact_parameters):
@@ -149,17 +149,17 @@ class Isoredshift(BaseModel):
         # Debugging output
         print("Coordinates with Radii Dict:", self.coordinates_with_radii_dict)
         
-        for b, e in zip(co[:-1], co[1:]):
-            if b not in self.coordinates_with_radii_dict or e not in self.coordinates_with_radii_dict:
-                print(f"Missing keys: {b}, {e}")
+        for impact_parameters, e in zip(co[:-1], co[1:]):
+            if impact_parameters not in self.coordinates_with_radii_dict or e not in self.coordinates_with_radii_dict:
+                print(f"Missing keys: {impact_parameters}, {e}")
                 continue  # Skip this iteration if keys are missing
-            r_inbetw = 0.5 * (self.coordinates_with_radii_dict[b] + self.coordinates_with_radii_dict[e])
-            begin_angle, end_angle = b[0], e[0]
+            r_inbetw = 0.5 * (self.coordinates_with_radii_dict[impact_parameters] + self.coordinates_with_radii_dict[e])
+            begin_angle, end_angle = impact_parameters[0], e[0]
             if end_angle - begin_angle > np.pi:
                 begin_angle, end_angle = end_angle, begin_angle
             argument, radius = self.calc_redshift_on_ir_between_angles(r_inbetw, begin_angle - 0.1, end_angle + 0.1,
                                                            plot_inbetween=False,
-                                                           title=f'between p{b} and p{e}',
+                                                           title=f'between p{impact_parameters} and p{e}',
                                                            force_solution=True)
             if len(argument) > 0:
                 self._add_solutions(argument, radius, r_inbetw)

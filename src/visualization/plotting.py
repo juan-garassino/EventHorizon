@@ -21,8 +21,8 @@ plt.rcParams["ytick.labelsize"] = 16
 
 def generate_isoradials(
     th0: float,
-    r_vals: npt.NDArray[float],
-    n_vals: Iterable[int],
+    radii: npt.NDArray[float],
+    image_orders: Iterable[int],
     color: Optional[Tuple[float, float, float, float]] = None,
     cmap: Optional[matplotlib.colors.LinearSegmentedColormap] = None,
 ) -> matplotlib.figure.Figure:
@@ -32,9 +32,9 @@ def generate_isoradials(
     ----------
     th0 : float
         Inclination of the observer with respect to the accretion disk normal
-    r_vals : npt.NDArray[float]
+    radii : npt.NDArray[float]
         Distances from the black hole center to the isoradials to be plotted
-    n_vals : Iterable[int]
+    image_orders : Iterable[int]
         Order of the images calculated
     color: Optional[Tuple(float, float, float, float)]
         RGBA tuple of the color to use to plot the isoradials; otherwise, argument colormap is used to map
@@ -57,22 +57,22 @@ def generate_isoradials(
     if cmap is None:
         cmap = ccm.ice
 
-    for image_order in sorted(n_vals)[::-1]:
-        for radius in r_vals:
+    for image_order in sorted(image_orders)[::-1]:
+        for radius in radii:
             if color is None:
-                linecolor = cmap((radius - np.min(r_vals)) / (np.max(r_vals) - np.min(r_vals)))
+                linecolor = cmap((radius - np.min(radii)) / (np.max(radii) - np.min(radii)))
             else:
                 linecolor = color
 
             iso = Isoradial(
                 bh.reorient_alpha(calculate_alpha, image_order),
-                bh.impact_parameter(calculate_alpha, radius, theta_0, image_order=image_order, m=1),
+                bh.impact_parameter(calculate_alpha, radius, theta_0, image_order=image_order, black_hole_mass=1),
                 radius,
                 theta_0,
                 image_order,
             )
 
-            ax.plot(iso.calculate_alpha, iso.b, color=linecolor)
+            ax.plot(iso.calculate_alpha, iso.impact_parameters, color=linecolor)
 
     return fig
 
@@ -80,10 +80,10 @@ def generate_isoradials(
 def generate_scatter_image(
     ax: Optional[matplotlib.axes.Axes],
     calculate_alpha: npt.NDArray[float],
-    r_vals: npt.NDArray[float],
+    radii: npt.NDArray[float],
     th0: float,
-    n_vals: Iterable[int],
-    m: float,
+    image_orders: Iterable[int],
+    black_hole_mass: float,
     cmap: Optional[matplotlib.colors.LinearSegmentedColormap] = None,
 ) -> matplotlib.figure.Figure:
     """Generate an image of the black hole using argument scatter plot.
@@ -94,13 +94,13 @@ def generate_scatter_image(
         Axes on which the image is to be drawn
     calculate_alpha: npt.NDArray[float]
         Polar angles for which the flux is to be plotted
-    r_vals : npt.NDArray[float]
+    radii : npt.NDArray[float]
         Distances from the black hole center to the isoradials to be plotted
     th0 : float
         Inclination of the observer with respect to the accretion disk normal
-    n_vals : Iterable[int]
+    image_orders : Iterable[int]
         Order of the images calculated
-    m : float
+    black_hole_mass : float
         Mass of the black hole
     cmap : Optional[matplotlib.colors.LinearSegmentedColormap]
         Colormap to use for plotting the image
@@ -111,7 +111,7 @@ def generate_scatter_image(
         Image of the given black hole isoradials.
     """
     theta_0 = th0 * np.pi / 180
-    df = bh.generate_image_data(calculate_alpha, r_vals, theta_0, n_vals, m, {"max_steps": 3})
+    df = bh.generate_image_data(calculate_alpha, radii, theta_0, image_orders, black_hole_mass, {"max_steps": 3})
 
     if ax is None:
         fig, ax = plt.subplots(figsize=(10, 10), subplot_kw={"projection": "polar"})
@@ -123,19 +123,19 @@ def generate_scatter_image(
 
     ax.set_theta_zero_location("S")
     ax.set_axis_off()
-    for image_order in sorted(n_vals, reverse=True):
+    for image_order in sorted(image_orders, reverse=True):
         df_n = df.loc[df["image_order"] == image_order]
-        ax.scatter(df_n["calculate_alpha"], df_n["b"], c=df_n["flux"], cmap=cmap)
+        ax.scatter(df_n["calculate_alpha"], df_n["impact_parameters"], c=df_n["flux"], cmap=cmap)
     return fig
 
 
 def generate_image(
     ax: Optional[matplotlib.axes.Axes],
     calculate_alpha: npt.NDArray[float],
-    r_vals: npt.NDArray[float],
+    radii: npt.NDArray[float],
     th0: float,
-    n_vals: Iterable[int],
-    m: float,
+    image_orders: Iterable[int],
+    black_hole_mass: float,
     cmap: Optional[matplotlib.colors.LinearSegmentedColormap],
 ) -> matplotlib.figure.Figure:
     """Generate an image of the black hole.
@@ -146,13 +146,13 @@ def generate_image(
         Axes on which the image is to be drawn
     calculate_alpha: npt.NDArray[float]
         Polar angles for which the flux is to be plotted
-    r_vals : npt.NDArray[float]
+    radii : npt.NDArray[float]
         Distances from the black hole center to the isoradials to be plotted
     th0 : float
         Inclination of the observer with respect to the accretion disk normal
-    n_vals : Iterable[int]
+    image_orders : Iterable[int]
         Order of the images calculated
-    m : float
+    black_hole_mass : float
         Mass of the black hole
     cmap : Optional[matplotlib.colors.LinearSegmentedColormap]
         Colormap to use for plotting the image
@@ -163,7 +163,7 @@ def generate_image(
         Image of the given black hole isoradials.
     """
     theta_0 = th0 * np.pi / 180
-    df = bh.generate_image_data(calculate_alpha, r_vals, theta_0, n_vals, m, {"max_steps": 3})
+    df = bh.generate_image_data(calculate_alpha, radii, theta_0, image_orders, black_hole_mass, {"max_steps": 3})
 
     if ax is None:
         _, ax = plt.subplots(figsize=(30, 30))
@@ -180,7 +180,7 @@ def generate_image(
 
     fluxgrid = np.zeros(xx.shape, dtype=float)
 
-    for image_order in n_vals:
+    for image_order in image_orders:
         df_n = df.loc[df["image_order"] == image_order]
         fluxgrid_n = si.griddata(
             (df_n["x_values"], df_n["y_values"]), df_n["flux"], (xx, yy), method="linear"

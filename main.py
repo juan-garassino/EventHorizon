@@ -21,18 +21,18 @@ params = {
         "mirror": True,  # Whether to mirror the calculated points for symmetry
     },
     "isoradial_solver_parameters": {
-        "initial_guesses": 12,  # Number of initial guesses for the root-finding algorithm
+        "initial_guess_count": 12,  # Number of initial guesses for the root-finding algorithm
         "midpoint_iterations": 20,  # Number of iteration_count for the midpoint method
         "plot_inbetween": False,  # Whether to plot intermediate steps (for debugging)
-        "min_periastron": 3.001,  # Minimum allowed periastron distance (in units of M)
+        "minimum_periastron": 3.001,  # Minimum allowed periastron distance (in units of M)
         "use_ellipse": True,  # Whether to use elliptical approximation when necessary
     },
     "isoredshift_solver_parameters": {
-        "initial_guesses": 12,  # Number of initial guesses for isoredshift calculations
+        "initial_guess_count": 12,  # Number of initial guesses for isoredshift calculations
         "midpoint_iterations": 12,  # Number of iteration_count for the midpoint method in isoredshift calculations
         "times_inbetween": 2,  # Number of times to refine the solution between known points
         "retry_angular_precision": 15,  # Angular precision for retry attempts
-        "min_periastron": 3.01,  # Minimum allowed periastron distance for isoredshift (in units of M)
+        "minimum_periastron": 3.01,  # Minimum allowed periastron distance for isoredshift (in units of M)
         "use_ellipse": True,  # Whether to use elliptical approximation for isoredshift when necessary
         "retry_tip": 50,  # Number of retry attempts for improving the tip of the isoredshift curve
         "initial_radial_precision": 15,  # Initial number of radial points to calculate

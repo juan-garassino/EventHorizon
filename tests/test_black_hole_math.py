@@ -17,7 +17,7 @@ class TestSymbolicExpressions(unittest.TestCase):
 
     def setUp(self):
         # Define symbols that might be used in the expressions
-        self.M, self.P, self.Q, self.N, self.calculate_alpha, self.theta_0, self.radius, self.b, self.mdot = sy.symbols('M P Q N calculate_alpha theta_0 radius b mdot')
+        self.M, self.P, self.Q, self.N, self.calculate_alpha, self.theta_0, self.radius, self.impact_parameters, self.mdot = sy.symbols('M P Q N calculate_alpha theta_0 radius impact_parameters mdot')
 
     def test_expr_q(self):
         expected = sy.sqrt((self.P - 2*self.M) * (self.P + 6*self.M))
@@ -60,7 +60,7 @@ class TestSymbolicExpressions(unittest.TestCase):
         self.assertEqual(len(result.arguments), 2)
 
     def test_expr_one_plus_z(self):
-        expected = (1 + sy.sqrt(self.M / self.radius**3) * self.b * sy.sin(self.theta_0) * sy.sin(self.calculate_alpha)) / sy.sqrt(1 - 3*self.M / self.radius)
+        expected = (1 + sy.sqrt(self.M / self.radius**3) * self.impact_parameters * sy.sin(self.theta_0) * sy.sin(self.calculate_alpha)) / sy.sqrt(1 - 3*self.M / self.radius)
         result = SymbolicExpressions.expr_one_plus_z()
         self.assertEqual(result, expected)
 
@@ -232,7 +232,7 @@ class TestUtilities(unittest.TestCase):
         self.tolerance = 1e-3
 
     def test_filter_periastrons(self):
-        result = Utilities.filter_periastrons(self.periastrons, self.black_hole_mass, self.tolerance)
+        result = Utilities.filter_valid_periastrons(self.periastrons, self.black_hole_mass, self.tolerance)
         self.assertNotIn(2.0, result)  # 2.0 should be filtered out
         self.assertIn(3.0, result)
         self.assertIn(4.0, result)
@@ -254,12 +254,12 @@ class TestOptimization(unittest.TestCase):
         self.index = 0
 
     def test_midpoint_method(self):
-        new_x, new_y, new_ind = Optimization.apply_midpoint_method(self.function, self.arguments, self.x_values, self.y_values, self.index)
+        new_x, new_y, new_index = Optimization.apply_midpoint_method(self.function, self.arguments, self.x_values, self.y_values, self.index)
         self.assertEqual(len(new_x), 3)
         self.assertEqual(len(new_y), 3)
         self.assertAlmostEqual(new_x[1], 2)
         self.assertAlmostEqual(new_y[1], 0)
-        self.assertEqual(new_ind, 0)
+        self.assertEqual(new_index, 0)
 
     def test_improve_solutions_midpoint(self):
         result = Optimization.refine_solution_with_midpoint_method(self.function, self.arguments, self.x_values, self.y_values, self.index, 5)
@@ -307,14 +307,14 @@ class TestSimulation(unittest.TestCase):
         radius = 10
         theta_0 = np.pi/4
         image_order = 0
-        m = 1
+        black_hole_mass = 1
         accretion_rate = 0.1
         
         mock_calc_impact_parameter.return_value = np.array([5, 5, 5, 5])
         mock_redshift_factor.return_value = np.array([1.1, 1.1, 1.1, 1.1])
         mock_flux_observed.return_value = np.array([100, 100, 100, 100])
         
-        result = Simulation.simulate_flux(calculate_alpha, radius, theta_0, image_order, m, accretion_rate)
+        result = Simulation.simulate_flux(calculate_alpha, radius, theta_0, image_order, black_hole_mass, accretion_rate)
         self.assertEqual(len(result), 4)
         self.assertEqual(result[0].shape, (4,))
         self.assertEqual(result[1].shape, (4,))
@@ -324,16 +324,16 @@ class TestSimulation(unittest.TestCase):
     @patch('src.math.simulation.Simulation.simulate_flux')
     def test_generate_image_data(self, mock_simulate_flux):
         calculate_alpha = np.array([0, np.pi/2, np.pi, 3*np.pi/2])
-        r_vals = [10, 20]
+        radii = [10, 20]
         theta_0 = np.pi/4
-        n_vals = [0, 1]
-        m = 1
+        image_orders = [0, 1]
+        black_hole_mass = 1
         accretion_rate = 0.1
         root_kwargs = {}
         
         mock_simulate_flux.return_value = (calculate_alpha, np.array([5, 5, 5, 5]), np.array([1.1, 1.1, 1.1, 1.1]), np.array([100, 100, 100, 100]))
         
-        result = Simulation.generate_image_data(calculate_alpha, r_vals, theta_0, n_vals, m, accretion_rate, root_kwargs)
+        result = Simulation.generate_image_data(calculate_alpha, radii, theta_0, image_orders, black_hole_mass, accretion_rate, root_kwargs)
         self.assertIsInstance(result, pd.DataFrame)
         self.assertEqual(len(result), 16)  # 4 calculate_alpha values * 2 radius values * 2 image_order values
 

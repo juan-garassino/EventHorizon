@@ -8,7 +8,7 @@ import bh
 from data import Isoradial
 
 
-def benchmark(th0: float, r_values: npt.NDArray[float], n_vals: Iterable[int]):
+def benchmark(th0: float, r_values: npt.NDArray[float], image_orders: Iterable[int]):
     """Run the isoradial benchmark routine.
 
         Run with pyinstrument or your favorite benchmarking tool to benchmark.
@@ -19,7 +19,7 @@ def benchmark(th0: float, r_values: npt.NDArray[float], n_vals: Iterable[int]):
         Inclination with respect to the accretion disk normal, in degrees
     r_values : npt.NDArray[float]
         Isoradial distances
-    n_vals : Iterable[int]
+    image_orders : Iterable[int]
         Order of the calculations
     """
     calculate_alpha = np.linspace(0, 2 * np.pi, 1000)
@@ -27,7 +27,7 @@ def benchmark(th0: float, r_values: npt.NDArray[float], n_vals: Iterable[int]):
 
     isoradials = []
     for radius in r_values:
-        for image_order in sorted(n_vals)[::-1]:
+        for image_order in sorted(image_orders)[::-1]:
             isoradials.append(
                 Isoradial(
                     bh.reorient_alpha(calculate_alpha, image_order),
@@ -42,4 +42,4 @@ def benchmark(th0: float, r_values: npt.NDArray[float], n_vals: Iterable[int]):
 
 
 if __name__ == "__main__":
-    benchmark(th0=80, r_values=np.arange(6, 30, 2), n_vals=[0, 1])
+    benchmark(th0=80, r_values=np.arange(6, 30, 2), image_orders=[0, 1])

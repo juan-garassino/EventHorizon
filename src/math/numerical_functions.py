@@ -35,7 +35,7 @@ class NumericalFunctions:
 
     @staticmethod
     def calculate_impact_parameter(periastron: float, black_hole_mass: float, verbose: bool = False) -> float:
-        """Get impact parameter b from Periastron distance P."""
+        """Get impact parameter impact_parameters from Periastron distance P."""
         if not NumericalFunctions.validate_parameters(periastron, black_hole_mass, verbose):
             return np.nan
         result = np.sqrt((periastron**3) / (periastron - 2 * black_hole_mass))

@@ -22,7 +22,7 @@ class Simulation:
         radius: float,
         theta_0: float,
         image_order: int,
-        m: float,
+        black_hole_mass: float,
         accretion_rate: float,
         objective_func: Optional[Callable] = None,
         root_kwargs: Optional[Dict[Any, Any]] = None,
@@ -37,59 +37,59 @@ class Simulation:
         calculate_alpha = np.asarray(calculate_alpha)
         
         # Calculate impact parameter, redshift factor, and flux
-        b = np.asarray(ImpactParameter.calc_impact_parameter(calculate_alpha, radius, theta_0, image_order, m, **root_kwargs))
-        opz = np.asarray(PhysicalFunctions.calculate_redshift_factor(radius, calculate_alpha, theta_0, m, b))
-        flux = np.asarray(PhysicalFunctions.calculate_observed_flux(radius, accretion_rate, m, opz))
+        impact_parameters = np.asarray(ImpactParameter.calc_impact_parameter(calculate_alpha, radius, theta_0, image_order, black_hole_mass, **root_kwargs))
+        redshift_factors = np.asarray(PhysicalFunctions.calculate_redshift_factor(radius, calculate_alpha, theta_0, black_hole_mass, impact_parameters))
+        flux = np.asarray(PhysicalFunctions.calculate_observed_flux(radius, accretion_rate, black_hole_mass, redshift_factors))
         
         # Reorient calculate_alpha and ensure all outputs are arrays
-        return Simulation.reorient_alpha(calculate_alpha, image_order), b, opz, flux
+        return Simulation.reorient_alpha(calculate_alpha, image_order), impact_parameters, redshift_factors, flux
 
 
     @staticmethod
-    def _worker_function(calculate_alpha, radius, theta_0, image_order, m, accretion_rate, root_kwargs):
-        return Simulation.simulate_flux(calculate_alpha, radius, theta_0, image_order, m, accretion_rate, None, root_kwargs)
+    def _worker_function(calculate_alpha, radius, theta_0, image_order, black_hole_mass, accretion_rate, root_kwargs):
+        return Simulation.simulate_flux(calculate_alpha, radius, theta_0, image_order, black_hole_mass, accretion_rate, None, root_kwargs)
 
     @staticmethod
     def generate_image_data(
         calculate_alpha: np.ndarray,
-        r_vals: Iterable[float],
+        radii: Iterable[float],
         theta_0: float,
-        n_vals: Iterable[int],
-        m: float,
+        image_orders: Iterable[int],
+        black_hole_mass: float,
         accretion_rate: float,
         root_kwargs: Dict[str, Any],
     ) -> pd.DataFrame:
         """Generate the data needed to produce an image of argument black hole."""
         data = []
-        for image_order in n_vals:
+        for image_order in image_orders:
             with mp.Pool(mp.cpu_count()) as pool:
-                arguments = [(calculate_alpha, radius, theta_0, image_order, m, accretion_rate, root_kwargs) for radius in r_vals]
+                arguments = [(calculate_alpha, radius, theta_0, image_order, black_hole_mass, accretion_rate, root_kwargs) for radius in radii]
                 results = pool.starmap(Simulation._worker_function, arguments)
                 
-                for radius, (alpha_reoriented, b, opz, flux) in zip(r_vals, results):
+                for radius, (reoriented_angles, impact_parameters, redshift_factors, flux) in zip(radii, results):
                     # Debug information to understand the structure of data
-                    #print(f"Debug Info - alpha_reoriented: {alpha_reoriented.shape}, b: {b.shape}, opz: {opz.shape}, flux: {flux.shape}")
+                    #print(f"Debug Info - reoriented_angles: {reoriented_angles.shape}, impact_parameters: {impact_parameters.shape}, redshift_factors: {redshift_factors.shape}, flux: {flux.shape}")
                     
-                    if (isinstance(alpha_reoriented, np.ndarray) and
-                        isinstance(b, np.ndarray) and
-                        isinstance(opz, np.ndarray) and
+                    if (isinstance(reoriented_angles, np.ndarray) and
+                        isinstance(impact_parameters, np.ndarray) and
+                        isinstance(redshift_factors, np.ndarray) and
                         isinstance(flux, np.ndarray)):
                         # Ensure all arrays are of the same length
-                        min_len = min(len(alpha_reoriented), len(b), len(opz), len(flux))
+                        min_len = min(len(reoriented_angles), len(impact_parameters), len(redshift_factors), len(flux))
                         
                         # Ensure consistency in length
-                        alpha_reoriented = alpha_reoriented[:min_len]
-                        b = b[:min_len]
-                        opz = opz[:min_len]
+                        reoriented_angles = reoriented_angles[:min_len]
+                        impact_parameters = impact_parameters[:min_len]
+                        redshift_factors = redshift_factors[:min_len]
                         flux = flux[:min_len]
                         
                         data.extend([
                             {
-                                "calculate_alpha": argument, "b": b_val, "opz": opz_val,
+                                "calculate_alpha": argument, "impact_parameters": b_val, "redshift_factors": opz_val,
                                 "radius": radius, "image_order": image_order, "flux": flux_val,
                                 "x_values": b_val * np.cos(argument), "y_values": b_val * np.sin(argument)
                             }
-                            for argument, b_val, opz_val, flux_val in zip(alpha_reoriented, b, opz, flux)
+                            for argument, b_val, opz_val, flux_val in zip(reoriented_angles, impact_parameters, redshift_factors, flux)
                         ])
                     else:
                         print("Error: One of the returned values is not an ndarray or has inconsistent dimensions")
