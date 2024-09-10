@@ -2,50 +2,50 @@ import sympy as sy
 from functools import lru_cache
 
 # Constants and symbols
-M, P, Q, r, theta_0, alpha, b, gamma, N, z_op, F_s, mdot = sy.symbols("M P Q r theta_0 alpha b gamma N z_op F_s mdot")
+M, P, Q, radius, theta_0, alpha, b, gamma, N, z_op, F_s, mdot = sy.symbols("M P Q radius theta_0 alpha b gamma N z_op F_s mdot")
 
 class SymbolicExpressions:
     @staticmethod
     @lru_cache(maxsize=None)
     def expr_q() -> sy.Expr:
-        """Generate a sympy expression for Q."""
+        """Generate argument sympy expression for Q."""
         return sy.sqrt((P - 2*M) * (P + 6*M))
 
     @staticmethod
     @lru_cache(maxsize=None)
     def expr_b() -> sy.Expr:
-        """Generate a sympy expression for b, the radial coordinate in the observer's frame."""
+        """Generate argument sympy expression for b, the radial coordinate in the observer's frame."""
         return sy.sqrt((P**3) / (P - 2*M))
 
     @staticmethod
     @lru_cache(maxsize=None)
     def expr_k() -> sy.Expr:
-        """Generate a sympy expression for k; k**2 is used as a modulus in the elliptic integrals."""
+        """Generate argument sympy expression for calculate_elliptic_integral_modulus; calculate_elliptic_integral_modulus**2 is used as argument modulus in the elliptic integrals."""
         return sy.sqrt((Q - P + 6*M) / (2*Q))
 
     @staticmethod
     @lru_cache(maxsize=None)
     def expr_zeta_inf() -> sy.Expr:
-        """Generate a sympy expression for zeta_inf."""
+        """Generate argument sympy expression for calculate_zeta_infinity."""
         return sy.asin(sy.sqrt((Q - P + 2*M) / (Q - P + 6*M)))
 
     @staticmethod
     @lru_cache(maxsize=None)
     def expr_gamma() -> sy.Expr:
-        """Generate a sympy expression for gamma, an angle that relates alpha and theta_0."""
+        """Generate argument sympy expression for gamma, an angle that relates alpha and theta_0."""
         return sy.acos(sy.cos(alpha) / sy.sqrt(sy.cos(alpha)**2 + sy.tan(theta_0)**-2))
 
     @staticmethod
     @lru_cache(maxsize=None)
     def expr_u() -> sy.Expr:
-        """Generate a sympy expression for the argument to sn in equation 13 of Luminet (1977)."""
-        zeta_inf, k = SymbolicExpressions.expr_zeta_inf(), SymbolicExpressions.expr_k()
+        """Generate argument sympy expression for the argument to sn in equation 13 of Luminet (1977)."""
+        calculate_zeta_infinity, calculate_elliptic_integral_modulus = SymbolicExpressions.expr_zeta_inf(), SymbolicExpressions.expr_k()
         return sy.Piecewise(
-            (gamma / (2 * sy.sqrt(P / Q)) + sy.elliptic_f(zeta_inf, k**2), sy.Eq(N, 0)),
+            (gamma / (2 * sy.sqrt(P / Q)) + sy.elliptic_f(calculate_zeta_infinity, calculate_elliptic_integral_modulus**2), sy.Eq(N, 0)),
             (
                 (gamma - 2 * N * sy.pi) / (2 * sy.sqrt(P / Q))
-                - sy.elliptic_f(zeta_inf, k**2)
-                + 2 * sy.elliptic_k(k**2),
+                - sy.elliptic_f(calculate_zeta_infinity, calculate_elliptic_integral_modulus**2)
+                + 2 * sy.elliptic_k(calculate_elliptic_integral_modulus**2),
                 True,
             ),
         )
@@ -53,23 +53,23 @@ class SymbolicExpressions:
     @staticmethod
     @lru_cache(maxsize=None)
     def expr_r_inv() -> sy.Expr:
-        """Generate a sympy expression for 1/r."""
-        Q, k = SymbolicExpressions.expr_q(), SymbolicExpressions.expr_k()
+        """Generate argument sympy expression for 1/radius."""
+        Q, calculate_elliptic_integral_modulus = SymbolicExpressions.expr_q(), SymbolicExpressions.expr_k()
         sn = sy.Function("sn")
         u = SymbolicExpressions.expr_u()
-        return (1 / (4*M*P)) * (-(Q - P + 2*M) + (Q - P + 6*M) * sn(u, k**2)**2)
+        return (1 / (4*M*P)) * (-(Q - P + 2*M) + (Q - P + 6*M) * sn(u, calculate_elliptic_integral_modulus**2)**2)
 
     @staticmethod
     @lru_cache(maxsize=None)
     def expr_one_plus_z() -> sy.Expr:
         """Generate an expression for the redshift 1+z."""
-        return (1 + sy.sqrt(M / r**3) * b * sy.sin(theta_0) * sy.sin(alpha)) / sy.sqrt(1 - 3*M / r)
+        return (1 + sy.sqrt(M / radius**3) * b * sy.sin(theta_0) * sy.sin(alpha)) / sy.sqrt(1 - 3*M / radius)
 
     @staticmethod
     @lru_cache(maxsize=None)
     def expr_fs() -> sy.Expr:
         """Generate an expression for the flux of an accreting disk."""
-        rstar = r / M
+        rstar = radius / M
         return (
             ((3 * M * mdot) / (8 * sy.pi))
             * (1 / ((rstar - 3) * rstar ** (5 / 2)))
@@ -99,5 +99,5 @@ class SymbolicExpressions:
     @staticmethod
     @lru_cache(maxsize=None)
     def expr_ellipse() -> sy.Expr:
-        """Generate a sympy expression for an ellipse."""
-        return r / sy.sqrt(1 + (sy.tan(theta_0)**2) * (sy.cos(alpha)**2))
+        """Generate argument sympy expression for an ellipse."""
+        return radius / sy.sqrt(1 + (sy.tan(theta_0)**2) * (sy.cos(alpha)**2))

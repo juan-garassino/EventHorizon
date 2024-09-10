@@ -30,8 +30,8 @@ class Isoredshift(BaseModel):
     def calc_from_isoradials(self, isoradials: List[Isoradial], cartesian: bool = False):
         solutions = {}
         for ir in isoradials:
-            a, r = ir.calc_redshift_location_on_ir(self.redshift, cartesian=cartesian)
-            solutions[ir.radius] = [a, r]
+            argument, radius = ir.calc_redshift_location_on_ir(self.redshift, cartesian=cartesian)
+            solutions[ir.radius] = [argument, radius]
         self.radii_w_coordinates_dict = solutions
         self._update()
 
@@ -40,7 +40,7 @@ class Isoredshift(BaseModel):
         if len(r_w_s) > 0:
             self.recalc_isoradials_wo_redshift_solutions(plot_inbetween=False)
             self.improve_tip(iterations=self.config["isoredshift_solver_parameters"]["retry_tip"])
-            for n in range(self.config["isoredshift_solver_parameters"]["times_inbetween"]):
+            for image_order in range(self.config["isoredshift_solver_parameters"]["times_inbetween"]):
                 self.improve_between_all_solutions_once()
                 self.order_coordinates(plot_title="calculating inbetween",
                                        plot_inbetween=self.config["isoredshift_solver_parameters"]["plot_inbetween"])
@@ -71,14 +71,14 @@ class Isoredshift(BaseModel):
         self.order_coordinates()
 
     def _extract_co_from_solutions_dict(self) -> Tuple[List[float], List[float]]:
-        a = []
-        r = []
+        argument = []
+        radius = []
         for key, val in self.radii_w_coordinates_dict.items():
             if len(val[0]) > 0:
                 angles, radii = val
-                a.extend(angles)
-                r.extend(radii)
-        return a, r
+                argument.extend(angles)
+                radius.extend(radii)
+        return argument, radius
 
     def order_coordinates(self, plot_title: str = "", plot_inbetween: bool = False):
         co = list(zip(self.angles, self.radii))
@@ -102,11 +102,11 @@ class Isoredshift(BaseModel):
     def recalc_isoradials_wo_redshift_solutions(self, plot_inbetween: bool = False):
         r_w_so, r_wo_s = self.split_co_on_solutions()
         if len(r_wo_s) > 0 and len(r_w_so) > 0:
-            a, r = self.recalc_redshift_on_closest_isoradial_wo_z()
+            argument, radius = self.recalc_redshift_on_closest_isoradial_wo_z()
             self.order_coordinates(plot_title="improving tip angular")
             r_w_so, r_wo_s = self.split_co_on_solutions()
-            while len(a) > 0 and len(r_wo_s) > 0:
-                a, r = self.recalc_redshift_on_closest_isoradial_wo_z()
+            while len(argument) > 0 and len(r_wo_s) > 0:
+                argument, radius = self.recalc_redshift_on_closest_isoradial_wo_z()
                 r_w_s, r_wo_s = self.split_co_on_solutions()
                 self.order_coordinates(plot_inbetween=plot_inbetween, plot_title="improving tip angular")
 
@@ -118,15 +118,15 @@ class Isoredshift(BaseModel):
         begin_angle, end_angle = angle_interval
         if end_angle - begin_angle > np.pi:
             begin_angle, end_angle = end_angle, begin_angle
-        a, b = self.calc_redshift_on_ir_between_angles(closest_r_wo_s, begin_angle, end_angle,
+        argument, b = self.calc_redshift_on_ir_between_angles(closest_r_wo_s, begin_angle, end_angle,
                                                        angular_precision=
                                                        self.config['isoredshift_solver_parameters']['retry_angular_precision'],
                                                        mirror=False)
         
-        print(f"Redshift solutions: a={a}, b={b}, closest_r_wo_s={closest_r_wo_s}")  # Debugging output
-        if len(a) > 0:
-            self._add_solutions(a, b, closest_r_wo_s)
-        return a, b
+        print(f"Redshift solutions: argument={argument}, b={b}, closest_r_wo_s={closest_r_wo_s}")  # Debugging output
+        if len(argument) > 0:
+            self._add_solutions(argument, b, closest_r_wo_s)
+        return argument, b
 
     def _add_solutions(self, angles: List[float], impact_parameters: List[float], radius_ir: float):
         for angle, impact_parameter in zip(angles, impact_parameters):
@@ -157,12 +157,12 @@ class Isoredshift(BaseModel):
             begin_angle, end_angle = b[0], e[0]
             if end_angle - begin_angle > np.pi:
                 begin_angle, end_angle = end_angle, begin_angle
-            a, r = self.calc_redshift_on_ir_between_angles(r_inbetw, begin_angle - 0.1, end_angle + 0.1,
+            argument, radius = self.calc_redshift_on_ir_between_angles(r_inbetw, begin_angle - 0.1, end_angle + 0.1,
                                                            plot_inbetween=False,
                                                            title=f'between p{b} and p{e}',
                                                            force_solution=True)
-            if len(a) > 0:
-                self._add_solutions(a, r, r_inbetw)
+            if len(argument) > 0:
+                self._add_solutions(argument, radius, r_inbetw)
 
     def improve_tip(self, iterations: int = 6):
         r_w_so, r_wo_s = self.split_co_on_solutions()
@@ -182,13 +182,13 @@ class Isoredshift(BaseModel):
             begin_angle, end_angle = angle_interval
             if end_angle - begin_angle > np.pi:
                 begin_angle, end_angle = end_angle, begin_angle
-            a, r = self.calc_redshift_on_ir_between_angles(inbetween_r, begin_angle - angular_margin,
+            argument, radius = self.calc_redshift_on_ir_between_angles(inbetween_r, begin_angle - angular_margin,
                                                            end_angle + angular_margin,
                                                            angular_precision=
                                                            self.config['isoredshift_solver_parameters']['retry_angular_precision'],
                                                            mirror=False)
-            if len(a) > 0:
-                self._add_solutions(a, r, inbetween_r)
+            if len(argument) > 0:
+                self._add_solutions(argument, radius, inbetween_r)
             else:
                 self.radii_w_coordinates_dict[inbetween_r] = [[], []]
 
@@ -200,5 +200,5 @@ class Isoredshift(BaseModel):
         ir = Isoradial(config=self.config, radius=radius, inclination=begin_angle, mass=self.mass, order=0)
 
         ir.find_redshift_params['force_redshift_solution'] = force_solution
-        a, r = ir.calc_redshift_location_on_ir(self.redshift, cartesian=False)
-        return a, r
+        argument, radius = ir.calc_redshift_location_on_ir(self.redshift, cartesian=False)
+        return argument, radius

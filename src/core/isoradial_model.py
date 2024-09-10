@@ -50,13 +50,13 @@ class Isoradial(BaseModel):
                 impact_parameters.append(b)
         
         if self.order > 0:
-            angles = [(a + np.pi) % (2 * np.pi) for a in angles]
+            angles = [(argument + np.pi) % (2 * np.pi) for argument in angles]
         
         if self.inclination > np.pi / 2:
-            angles = [(a + np.pi) % (2 * np.pi) for a in angles]
+            angles = [(argument + np.pi) % (2 * np.pi) for argument in angles]
         
         if self.config['isoradial_angular_parameters']['mirror']:
-            angles += [(2 * np.pi - a) % (2 * np.pi) for a in angles[::-1]]
+            angles += [(2 * np.pi - argument) % (2 * np.pi) for argument in angles[::-1]]
             impact_parameters += impact_parameters[::-1]
         
         self.angles = angles
@@ -64,7 +64,7 @@ class Isoradial(BaseModel):
         self.X, self.Y = polar_to_cartesian_lists(self.radii_b, self.angles, rotation=-np.pi / 2)
 
     def calc_redshift_factors(self):
-        self.redshift_factors = [PhysicalFunctions.redshift_factor(self.radius, angle, self.inclination, self.mass, b) 
+        self.redshift_factors = [PhysicalFunctions.calculate_redshift_factor(self.radius, angle, self.inclination, self.mass, b) 
                                  for b, angle in zip(self.radii_b, self.angles)]
         #print(f"Redshift factors: {self.redshift_factors}")
 
@@ -101,7 +101,7 @@ class Isoradial(BaseModel):
             self.mass,
             **self.config['isoradial_solver_parameters']
         )
-        z = PhysicalFunctions.redshift_factor(self.radius, mid_angle, self.inclination, self.mass, b)
+        z = PhysicalFunctions.calculate_redshift_factor(self.radius, mid_angle, self.inclination, self.mass, b)
         self.radii_b.insert(ind + 1, b)
         self.angles.insert(ind + 1, mid_angle)
         self.redshift_factors.insert(ind + 1, z)

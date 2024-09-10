@@ -17,7 +17,7 @@ class TestSymbolicExpressions(unittest.TestCase):
 
     def setUp(self):
         # Define symbols that might be used in the expressions
-        self.M, self.P, self.Q, self.N, self.alpha, self.theta_0, self.r, self.b, self.mdot = sy.symbols('M P Q N alpha theta_0 r b mdot')
+        self.M, self.P, self.Q, self.N, self.alpha, self.theta_0, self.radius, self.b, self.mdot = sy.symbols('M P Q N alpha theta_0 radius b mdot')
 
     def test_expr_q(self):
         expected = sy.sqrt((self.P - 2*self.M) * (self.P + 6*self.M))
@@ -48,24 +48,24 @@ class TestSymbolicExpressions(unittest.TestCase):
     @patch('src.math.symbolic_expressions.SymbolicExpressions.expr_k')
     def test_expr_u(self, mock_k, mock_zeta_inf):
         # Mock the return values of expr_zeta_inf and expr_k
-        mock_zeta_inf.return_value = sy.Symbol('zeta_inf')
-        mock_k.return_value = sy.Symbol('k')
+        mock_zeta_inf.return_value = sy.Symbol('calculate_zeta_infinity')
+        mock_k.return_value = sy.Symbol('calculate_elliptic_integral_modulus')
 
         result = SymbolicExpressions.expr_u()
         
-        # Check if the result is a Piecewise function
+        # Check if the result is argument Piecewise function
         self.assertIsInstance(result, sy.Piecewise)
         
         # Check if it has two pieces
         self.assertEqual(len(result.args), 2)
 
     def test_expr_one_plus_z(self):
-        expected = (1 + sy.sqrt(self.M / self.r**3) * self.b * sy.sin(self.theta_0) * sy.sin(self.alpha)) / sy.sqrt(1 - 3*self.M / self.r)
+        expected = (1 + sy.sqrt(self.M / self.radius**3) * self.b * sy.sin(self.theta_0) * sy.sin(self.alpha)) / sy.sqrt(1 - 3*self.M / self.radius)
         result = SymbolicExpressions.expr_one_plus_z()
         self.assertEqual(result, expected)
 
     def test_expr_fs(self):
-        rstar = self.r / self.M
+        rstar = self.radius / self.M
         expected = (
             ((3 * self.M * self.mdot) / (8 * sy.pi))
             * (1 / ((rstar - 3) * rstar ** (5 / 2)))
@@ -85,98 +85,98 @@ class TestSymbolicExpressions(unittest.TestCase):
 class TestNumericalFunctions(unittest.TestCase):
     def setUp(self):
         self.periastron = 10.0
-        self.bh_mass = 1.0
-        self.tol = 1e-6
+        self.black_hole_mass = 1.0
+        self.tolerance = 1e-6
 
     def test_calc_q(self):
-        expected = np.sqrt((self.periastron - 2*self.bh_mass) * (self.periastron + 6*self.bh_mass))
-        result = NumericalFunctions.calc_q(self.periastron, self.bh_mass)
-        self.assertAlmostEqual(result, expected, delta=self.tol)
+        expected = np.sqrt((self.periastron - 2*self.black_hole_mass) * (self.periastron + 6*self.black_hole_mass))
+        result = NumericalFunctions.calculate_q_parameter(self.periastron, self.black_hole_mass)
+        self.assertAlmostEqual(result, expected, delta=self.tolerance)
 
     def test_calc_b_from_periastron(self):
-        expected = np.sqrt((self.periastron**3) / (self.periastron - 2*self.bh_mass))
-        result = NumericalFunctions.calc_b_from_periastron(self.periastron, self.bh_mass)
-        self.assertAlmostEqual(result, expected, delta=self.tol)
+        expected = np.sqrt((self.periastron**3) / (self.periastron - 2*self.black_hole_mass))
+        result = NumericalFunctions.calculate_impact_parameter(self.periastron, self.black_hole_mass)
+        self.assertAlmostEqual(result, expected, delta=self.tolerance)
 
     def test_k(self):
-        q = NumericalFunctions.calc_q(self.periastron, self.bh_mass)
-        expected = np.sqrt((q - self.periastron + 6 * self.bh_mass) / (2 * q))
-        result = NumericalFunctions.k(self.periastron, self.bh_mass)
-        self.assertAlmostEqual(result, expected, delta=self.tol)
+        q = NumericalFunctions.calculate_q_parameter(self.periastron, self.black_hole_mass)
+        expected = np.sqrt((q - self.periastron + 6 * self.black_hole_mass) / (2 * q))
+        result = NumericalFunctions.calculate_elliptic_integral_modulus(self.periastron, self.black_hole_mass)
+        self.assertAlmostEqual(result, expected, delta=self.tolerance)
 
     def test_k2(self):
-        q = NumericalFunctions.calc_q(self.periastron, self.bh_mass)
-        expected = (q - self.periastron + 6 * self.bh_mass) / (2 * q)
-        result = NumericalFunctions.k2(self.periastron, self.bh_mass)
-        self.assertAlmostEqual(result, expected, delta=self.tol)
+        q = NumericalFunctions.calculate_q_parameter(self.periastron, self.black_hole_mass)
+        expected = (q - self.periastron + 6 * self.black_hole_mass) / (2 * q)
+        result = NumericalFunctions.calculate_squared_elliptic_integral_modulus(self.periastron, self.black_hole_mass)
+        self.assertAlmostEqual(result, expected, delta=self.tolerance)
 
     def test_zeta_inf(self):
-        q = NumericalFunctions.calc_q(self.periastron, self.bh_mass)
-        arg = (q - self.periastron + 2 * self.bh_mass) / (q - self.periastron + 6 * self.bh_mass)
+        q = NumericalFunctions.calculate_q_parameter(self.periastron, self.black_hole_mass)
+        arg = (q - self.periastron + 2 * self.black_hole_mass) / (q - self.periastron + 6 * self.black_hole_mass)
         expected = np.arcsin(np.sqrt(arg))
-        result = NumericalFunctions.zeta_inf(self.periastron, self.bh_mass)
-        self.assertAlmostEqual(result, expected, delta=self.tol)
+        result = NumericalFunctions.calculate_zeta_infinity(self.periastron, self.black_hole_mass)
+        self.assertAlmostEqual(result, expected, delta=self.tolerance)
 
     def test_zeta_r(self):
-        r = 20.0
-        q = NumericalFunctions.calc_q(self.periastron, self.bh_mass)
-        a = (q - self.periastron + 2 * self.bh_mass + (4 * self.bh_mass * self.periastron) / r) / (q - self.periastron + (6 * self.bh_mass))
-        expected = np.arcsin(np.sqrt(a))
-        result = NumericalFunctions.zeta_r(self.periastron, r, self.bh_mass)
-        self.assertAlmostEqual(result, expected, delta=self.tol)
+        radius = 20.0
+        q = NumericalFunctions.calculate_q_parameter(self.periastron, self.black_hole_mass)
+        argument = (q - self.periastron + 2 * self.black_hole_mass + (4 * self.black_hole_mass * self.periastron) / radius) / (q - self.periastron + (6 * self.black_hole_mass))
+        expected = np.arcsin(np.sqrt(argument))
+        result = NumericalFunctions.calculate_zeta_radius(self.periastron, radius, self.black_hole_mass)
+        self.assertAlmostEqual(result, expected, delta=self.tolerance)
 
 class TestGeometricFunctions(unittest.TestCase):
     def setUp(self):
-        self.tol = 1e-6
+        self.tolerance = 1e-6
 
     def test_cos_gamma(self):
-        a = np.pi/4
-        incl = np.pi/3
-        expected = np.cos(a) / np.sqrt(np.cos(a) ** 2 + 1 / (np.tan(incl) ** 2))
-        result = GeometricFunctions.cos_gamma(a, incl)
-        self.assertAlmostEqual(result, expected, delta=self.tol)
+        argument = np.pi/4
+        inclination = np.pi/3
+        expected = np.cos(argument) / np.sqrt(np.cos(argument) ** 2 + 1 / (np.tan(inclination) ** 2))
+        result = GeometricFunctions.cos_gamma(argument, inclination)
+        self.assertAlmostEqual(result, expected, delta=self.tolerance)
 
     def test_cos_gamma_zero_incl(self):
-        a = np.pi/4
-        incl = 0
-        result = GeometricFunctions.cos_gamma(a, incl)
-        self.assertAlmostEqual(result, 0, delta=self.tol)
+        argument = np.pi/4
+        inclination = 0
+        result = GeometricFunctions.cos_gamma(argument, inclination)
+        self.assertAlmostEqual(result, 0, delta=self.tolerance)
 
     def test_cos_alpha(self):
         phi = np.pi/4
-        incl = np.pi/3
-        expected = np.cos(phi) * np.cos(incl) / np.sqrt((1 - np.sin(incl) ** 2 * np.cos(phi) ** 2))
-        result = GeometricFunctions.cos_alpha(phi, incl)
-        self.assertAlmostEqual(result, expected, delta=self.tol)
+        inclination = np.pi/3
+        expected = np.cos(phi) * np.cos(inclination) / np.sqrt((1 - np.sin(inclination) ** 2 * np.cos(phi) ** 2))
+        result = GeometricFunctions.cos_alpha(phi, inclination)
+        self.assertAlmostEqual(result, expected, delta=self.tolerance)
 
     def test_alpha(self):
         phi = np.pi/4
-        incl = np.pi/3
-        expected = np.arccos(GeometricFunctions.cos_alpha(phi, incl))
-        result = GeometricFunctions.alpha(phi, incl)
-        self.assertAlmostEqual(result, expected, delta=self.tol)
+        inclination = np.pi/3
+        expected = np.arccos(GeometricFunctions.cos_alpha(phi, inclination))
+        result = GeometricFunctions.alpha(phi, inclination)
+        self.assertAlmostEqual(result, expected, delta=self.tolerance)
 
     def test_ellipse(self):
-        r = 10.0
-        a = np.pi/4
-        incl = np.pi/3
-        g = np.arccos(GeometricFunctions.cos_gamma(a, incl))
-        expected = r * np.sin(g)
-        result = GeometricFunctions.ellipse(r, a, incl)
-        self.assertAlmostEqual(result, expected, delta=self.tol)
+        radius = 10.0
+        argument = np.pi/4
+        inclination = np.pi/3
+        g = np.arccos(GeometricFunctions.cos_gamma(argument, inclination))
+        expected = radius * np.sin(g)
+        result = GeometricFunctions.ellipse(radius, argument, inclination)
+        self.assertAlmostEqual(result, expected, delta=self.tolerance)
 
 class TestPhysicalFunctions(unittest.TestCase):
     def setUp(self):
         self.periastron = 10.0
-        self.ir_radius = 5.0
-        self.ir_angle = np.pi/4
-        self.bh_mass = 1.0
-        self.incl = np.pi/3
-        self.tol = 1e-6
+        self.emission_radius = 5.0
+        self.emission_angle = np.pi/4
+        self.black_hole_mass = 1.0
+        self.inclination = np.pi/3
+        self.tolerance = 1e-6
 
-    @patch('src.math.numerical_functions.NumericalFunctions.zeta_inf')
-    @patch('src.math.numerical_functions.NumericalFunctions.calc_q')
-    @patch('src.math.numerical_functions.NumericalFunctions.k2')
+    @patch('src.math.numerical_functions.NumericalFunctions.calculate_zeta_infinity')
+    @patch('src.math.numerical_functions.NumericalFunctions.calculate_q_parameter')
+    @patch('src.math.numerical_functions.NumericalFunctions.calculate_squared_elliptic_integral_modulus')
     @patch('src.math.geometric_functions.GeometricFunctions.cos_gamma')
     def test_eq13(self, mock_cos_gamma, mock_k2, mock_calc_q, mock_zeta_inf):
         mock_zeta_inf.return_value = 0.5
@@ -184,55 +184,55 @@ class TestPhysicalFunctions(unittest.TestCase):
         mock_k2.return_value = 0.25
         mock_cos_gamma.return_value = np.cos(np.pi/4)
 
-        result = PhysicalFunctions.eq13(self.periastron, self.ir_radius, self.ir_angle, self.bh_mass, self.incl)
+        result = PhysicalFunctions.calculate_luminet_equation_13(self.periastron, self.emission_radius, self.emission_angle, self.black_hole_mass, self.inclination)
         self.assertIsInstance(result, float)
 
     def test_redshift_factor(self):
         radius = 20.0
         angle = np.pi/4
-        b_ = 5.0
-        result = PhysicalFunctions.redshift_factor(radius, angle, self.incl, self.bh_mass, b_)
+        impact_parameter = 5.0
+        result = PhysicalFunctions.calculate_redshift_factor(radius, angle, self.inclination, self.black_hole_mass, impact_parameter)
         self.assertIsInstance(result, float)
         self.assertGreater(result, 0)  # Redshift factor should be positive
 
     def test_flux_intrinsic(self):
         r_val = 20.0
-        acc = 0.1
-        result = PhysicalFunctions.flux_intrinsic(r_val, acc, self.bh_mass)
+        accretion_rate = 0.1
+        result = PhysicalFunctions.calculate_intrinsic_flux(r_val, accretion_rate, self.black_hole_mass)
         self.assertIsInstance(result, float)
         self.assertGreater(result, 0)  # Flux should be positive
 
     def test_flux_observed(self):
         r_val = 20.0
-        acc = 0.1
-        redshift_factor = 1.5
-        result = PhysicalFunctions.flux_observed(r_val, acc, self.bh_mass, redshift_factor)
+        accretion_rate = 0.1
+        calculate_redshift_factor = 1.5
+        result = PhysicalFunctions.calculate_observed_flux(r_val, accretion_rate, self.black_hole_mass, calculate_redshift_factor)
         self.assertIsInstance(result, float)
         self.assertGreater(result, 0)  # Observed flux should be positive
 
-    @patch('src.math.numerical_functions.NumericalFunctions.calc_q')
-    @patch('src.math.numerical_functions.NumericalFunctions.k2')
-    @patch('src.math.numerical_functions.NumericalFunctions.zeta_inf')
+    @patch('src.math.numerical_functions.NumericalFunctions.calculate_q_parameter')
+    @patch('src.math.numerical_functions.NumericalFunctions.calculate_squared_elliptic_integral_modulus')
+    @patch('src.math.numerical_functions.NumericalFunctions.calculate_zeta_infinity')
     def test_phi_inf(self, mock_zeta_inf, mock_k2, mock_calc_q):
         mock_calc_q.return_value = 8.0
         mock_k2.return_value = 0.25
         mock_zeta_inf.return_value = 0.5
 
-        result = PhysicalFunctions.phi_inf(self.periastron, self.bh_mass)
+        result = PhysicalFunctions.calculate_phi_infinity(self.periastron, self.black_hole_mass)
         self.assertIsInstance(result, float)
 
     def test_mu(self):
-        result = PhysicalFunctions.mu(self.periastron, self.bh_mass)
+        result = PhysicalFunctions.calculate_mu(self.periastron, self.black_hole_mass)
         self.assertIsInstance(result, float)
 
 class TestUtilities(unittest.TestCase):
     def setUp(self):
         self.periastrons = [2.0, 3.0, 4.0, 5.0]
-        self.bh_mass = 1.0
-        self.tol = 1e-3
+        self.black_hole_mass = 1.0
+        self.tolerance = 1e-3
 
     def test_filter_periastrons(self):
-        result = Utilities.filter_periastrons(self.periastrons, self.bh_mass, self.tol)
+        result = Utilities.filter_periastrons(self.periastrons, self.black_hole_mass, self.tolerance)
         self.assertNotIn(2.0, result)  # 2.0 should be filtered out
         self.assertIn(3.0, result)
         self.assertIn(4.0, result)
@@ -243,7 +243,7 @@ class TestUtilities(unittest.TestCase):
         expr = x**2 + y**2
         func = Utilities.lambdify((x, y), expr)
         result = func(2, 3)
-        self.assertAlmostEqual(result, 13, delta=self.tol)
+        self.assertAlmostEqual(result, 13, delta=self.tolerance)
 
 class TestOptimization(unittest.TestCase):
     def setUp(self):
@@ -265,9 +265,9 @@ class TestOptimization(unittest.TestCase):
         result = Optimization.improve_solutions_midpoint(self.func, self.args, self.x, self.y, self.ind, 5)
         self.assertAlmostEqual(result, 2, delta=1e-2)  # Use delta or adjust as needed
 
-    @patch('src.math.physical_functions.PhysicalFunctions.eq13')
+    @patch('src.math.physical_functions.PhysicalFunctions.calculate_luminet_equation_13')
     def test_calc_periastron(self, mock_eq13):
-        mock_eq13.return_value = 1  # Mock return value should be a valid number
+        mock_eq13.return_value = 1  # Mock return value should be argument valid number
         result = Optimization.calc_periastron(5, np.pi/4, np.pi/3, 1)
         self.assertIsNotNone(result)  # Check that result is not None
         self.assertIsInstance(result, float)  # Ensure the result is of type float or expected type
@@ -276,7 +276,7 @@ class TestOptimization(unittest.TestCase):
 
 class TestImpactParameter(unittest.TestCase):
     @patch('src.math.optimization.Optimization.calc_periastron')
-    @patch('src.math.numerical_functions.NumericalFunctions.calc_b_from_periastron')
+    @patch('src.math.numerical_functions.NumericalFunctions.calculate_impact_parameter')
     def test_calc_impact_parameter(self, mock_calc_b, mock_calc_periastron):
         mock_calc_periastron.return_value = 5
         mock_calc_b.return_value = 10
@@ -294,27 +294,27 @@ class TestImpactParameter(unittest.TestCase):
 class TestSimulation(unittest.TestCase):
     def test_reorient_alpha(self):
         alpha = np.array([0, np.pi/2, np.pi, 3*np.pi/2])
-        n = 1
-        result = Simulation.reorient_alpha(alpha, n)
+        image_order = 1
+        result = Simulation.reorient_alpha(alpha, image_order)
         expected = np.array([np.pi, 3*np.pi/2, 0, np.pi/2])
         np.testing.assert_array_almost_equal(result, expected)
 
     @patch('src.math.impact_parameter.ImpactParameter.calc_impact_parameter')
-    @patch('src.math.physical_functions.PhysicalFunctions.redshift_factor')
-    @patch('src.math.physical_functions.PhysicalFunctions.flux_observed')
+    @patch('src.math.physical_functions.PhysicalFunctions.calculate_redshift_factor')
+    @patch('src.math.physical_functions.PhysicalFunctions.calculate_observed_flux')
     def test_simulate_flux(self, mock_flux_observed, mock_redshift_factor, mock_calc_impact_parameter):
         alpha = np.array([0, np.pi/2, np.pi, 3*np.pi/2])
-        r = 10
+        radius = 10
         theta_0 = np.pi/4
-        n = 0
+        image_order = 0
         m = 1
-        acc = 0.1
+        accretion_rate = 0.1
         
         mock_calc_impact_parameter.return_value = np.array([5, 5, 5, 5])
         mock_redshift_factor.return_value = np.array([1.1, 1.1, 1.1, 1.1])
         mock_flux_observed.return_value = np.array([100, 100, 100, 100])
         
-        result = Simulation.simulate_flux(alpha, r, theta_0, n, m, acc)
+        result = Simulation.simulate_flux(alpha, radius, theta_0, image_order, m, accretion_rate)
         self.assertEqual(len(result), 4)
         self.assertEqual(result[0].shape, (4,))
         self.assertEqual(result[1].shape, (4,))
@@ -328,14 +328,14 @@ class TestSimulation(unittest.TestCase):
         theta_0 = np.pi/4
         n_vals = [0, 1]
         m = 1
-        acc = 0.1
+        accretion_rate = 0.1
         root_kwargs = {}
         
         mock_simulate_flux.return_value = (alpha, np.array([5, 5, 5, 5]), np.array([1.1, 1.1, 1.1, 1.1]), np.array([100, 100, 100, 100]))
         
-        result = Simulation.generate_image_data(alpha, r_vals, theta_0, n_vals, m, acc, root_kwargs)
+        result = Simulation.generate_image_data(alpha, r_vals, theta_0, n_vals, m, accretion_rate, root_kwargs)
         self.assertIsInstance(result, pd.DataFrame)
-        self.assertEqual(len(result), 16)  # 4 alpha values * 2 r values * 2 n values
+        self.assertEqual(len(result), 16)  # 4 alpha values * 2 radius values * 2 image_order values
 
 if __name__ == '__main__':
     unittest.main()

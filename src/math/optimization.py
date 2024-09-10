@@ -27,7 +27,7 @@ class Optimization:
     @staticmethod
     def improve_solutions_midpoint(func: Callable, args: Dict[str, Any], x: list, y: list, index_of_sign_change: int, iterations: int, verbose: bool = False) -> float:
         """Improve solutions using the midpoint method."""
-        new_x, new_y = x.copy(), y.copy()  # Make a copy to avoid modifying the original lists
+        new_x, new_y = x.copy(), y.copy()  # Make argument copy to avoid modifying the original lists
         new_ind = index_of_sign_change
         for i in range(iterations):
             new_x, new_y, new_ind = Optimization.midpoint_method(func=func, args=args, x=new_x, y=new_y, ind=new_ind, verbose=verbose)
@@ -40,11 +40,11 @@ class Optimization:
         return updated_periastron
 
     @staticmethod
-    def calc_periastron(_r: float, incl: float, _alpha: float, bh_mass: float, midpoint_iterations: int = 100, 
-                        plot_inbetween: bool = False, n: int = 0, min_periastron: float = 1., initial_guesses: int = 20, verbose: bool = False) -> Optional[float]:
+    def calc_periastron(_r: float, inclination: float, _alpha: float, black_hole_mass: float, midpoint_iterations: int = 100, 
+                        plot_inbetween: bool = False, image_order: int = 0, min_periastron: float = 1., initial_guesses: int = 20, verbose: bool = False) -> Optional[float]:
         """Calculate the periastron for given parameters."""
         periastron_range = list(np.linspace(min_periastron, 2. * _r, initial_guesses))
-        y_ = [PhysicalFunctions.eq13(P_value, _r, _alpha, bh_mass, incl, n) for P_value in periastron_range]
+        y_ = [PhysicalFunctions.calculate_luminet_equation_13(P_value, _r, _alpha, black_hole_mass, inclination, image_order) for P_value in periastron_range]
         ind = np.where(np.diff(np.sign(y_)))[0]
 
         if verbose:
@@ -60,9 +60,9 @@ class Optimization:
         periastron_solution = periastron_range[ind[0]] if len(ind) > 0 else None
 
         if (periastron_solution is not None) and (not np.isnan(periastron_solution)):
-            args_eq13 = {"ir_radius": _r, "ir_angle": _alpha, "bh_mass": bh_mass, "incl": incl, "n": n}
+            args_eq13 = {"emission_radius": _r, "emission_angle": _alpha, "black_hole_mass": black_hole_mass, "inclination": inclination, "image_order": image_order}
             periastron_solution = Optimization.improve_solutions_midpoint(
-                func=PhysicalFunctions.eq13, args=args_eq13,
+                func=PhysicalFunctions.calculate_luminet_equation_13, args=args_eq13,
                 x=periastron_range, y=y_, index_of_sign_change=ind[0] if len(ind) > 0 else 0,
                 iterations=midpoint_iterations, verbose=verbose
             )

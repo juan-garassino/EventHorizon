@@ -13,7 +13,7 @@ class IsoradialPlotter(BasePlotter):
         if ax is None:
             ax = self.ax
         
-        label = f'Isoradial (r={isoradial.radius:.2f})'
+        label = f'Isoradial (radius={isoradial.radius:.2f})'
         if self.config['plot_params']['redshift']:
             line = self._colorline(ax, isoradial.X, isoradial.Y, 
                             z=[e - 1 for e in isoradial.redshift_factors],

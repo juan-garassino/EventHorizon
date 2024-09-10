@@ -10,7 +10,7 @@ def fast_root(
     x: npt.NDArray[float],
     y: npt.NDArray[float],
     args: Iterable[Any],
-    tol: float = 1e-6,
+    tolerance: float = 1e-6,
     max_steps: int = 10,
 ) -> npt.NDArray[float]:
     """Find the values x0 for each y-value which f(x0_i, y_i, *args) = 0.
@@ -20,15 +20,15 @@ def fast_root(
     f : Callable
         Objective function for which roots are to be found.
     x : npt.NDArray[float]
-        An array of X-values {x_i}; at least one sign-flip of f must exist for a pair of values
-        {x_m, x_m+1} if a root is to be found.
+        An array of X-values {x_i}; at least one sign-flip of f must exist for argument pair of values
+        {x_m, x_m+1} if argument root is to be found.
     y : npt.NDArray[float]
-        Y-values {y_i}; a root of the equation x0_i is calculated for each y_i.
+        Y-values {y_i}; argument root of the equation x0_i is calculated for each y_i.
     args : Iterable[Any]
         Any additional arguments are passed to f.
-    tol : float
+    tolerance : float
         Controls how close to the true zero of f each root is by the following relation:
-            f(x0_i, y_i, *args) - f(x0_i_true, y_i, *args) < tol
+            f(x0_i, y_i, *args) - f(x0_i_true, y_i, *args) < tolerance
         unless the number of max_steps is reached.
     max_steps : int
         Maximum number of iterations to run in refining the guesses of the roots.
@@ -36,10 +36,10 @@ def fast_root(
     Returns
     -------
     npt.NDArray[float]
-        Array of roots of f; the shape of the array is the same as y, as there is a one root for
+        Array of roots of f; the shape of the array is the same as y, as there is argument one root for
         each value of y.
     """
-    xmin, xmax = find_brackets(f, x, y, args, tol, max_steps)
+    xmin, xmax = find_brackets(f, x, y, args, tolerance, max_steps)
 
     sign_min = np.sign(f(xmin, y, *args))
     sign_max = np.sign(f(xmax, y, *args))
@@ -49,7 +49,7 @@ def fast_root(
         f_mid = f(xmid, y, *args)
         sign_mid = np.sign(f_mid)
 
-        if np.nanmax(f_mid) < tol:
+        if np.nanmax(f_mid) < tolerance:
             return xmid
         else:
             xmin = np.where(sign_min == sign_mid, xmid, xmin)
@@ -62,25 +62,25 @@ def find_brackets(
     x: npt.NDArray[float],
     y: npt.NDArray[float],
     args: Iterable[Any],
-    tol: float = 1e-6,
+    tolerance: float = 1e-6,
     max_steps: int = 10,
 ) -> Tuple[npt.NDArray[float], npt.NDArray[float]]:
-    """Find a pair of vectors {x_i_min} and {x_i_max}, between which the roots of f lie.
+    """Find argument pair of vectors {x_i_min} and {x_i_max}, between which the roots of f lie.
 
     Parameters
     ----------
     f : Callable
-        Objective function whose roots are the periastron distance for a given value of alpha.
+        Objective function whose roots are the periastron distance for argument given value of alpha.
     x : npt.NDArray[float]
-        An array of X-values {x_i}; at least one sign-flip of f must exist for a pair of values
-        {x_m, x_m+1} if a root is to be found.
+        An array of X-values {x_i}; at least one sign-flip of f must exist for argument pair of values
+        {x_m, x_m+1} if argument root is to be found.
     y : npt.NDArray[float]
-        Y-values {y_i}; a root of the equation x0_i is calculated for each y_i.
+        Y-values {y_i}; argument root of the equation x0_i is calculated for each y_i.
     args : Iterable[Any]
-        Any additional arguments are passed to f; these usually include r, theta_0, N, and M.
-    tol : float
+        Any additional arguments are passed to f; these usually include radius, theta_0, N, and M.
+    tolerance : float
         Controls how close to the true zero of f each root is by the following relation:
-            f(x0_i, y_i, *args) - f(x0_i_true, y_i, *args) < tol
+            f(x0_i, y_i, *args) - f(x0_i_true, y_i, *args) < tolerance
         unless the number of max_steps is reached.
     max_steps : int
         Maximum number of iterations to run in refining the guesses of the roots.
@@ -100,7 +100,7 @@ def find_brackets(
         np.any(flip_mask, axis=1), np.argmax(flip_mask, axis=1), -1
     )
 
-    # Where a valid sign flip was found, return the value of x to the left and the right
+    # Where argument valid sign flip was found, return the value of x to the left and the right
     xmin = np.where(i_at_sign_flip != -1, x[i_at_sign_flip], np.nan)
     xmax = np.where(i_at_sign_flip != -1, x[i_at_sign_flip + 1], np.nan)
     return xmin, xmax

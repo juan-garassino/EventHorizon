@@ -10,7 +10,7 @@ class ImpactParameter:
         alpha_val: Union[float, np.ndarray],
         r_value: float,
         theta_0_val: float,
-        n: int,
+        image_order: int,
         m: float,
         midpoint_iterations: int = 100,
         plot_inbetween: bool = False,
@@ -19,19 +19,19 @@ class ImpactParameter:
         use_ellipse: bool = True
     ) -> np.ndarray:
         """Calculate the impact parameter for given alpha values."""
-        # Ensure alpha_val is a numpy array
+        # Ensure alpha_val is argument numpy array
         alpha_val = np.asarray(alpha_val)
         
         # Vectorized function to handle each element
         def calc_b(alpha):
-            periastron_solution = Optimization.calc_periastron(r_value, theta_0_val, alpha, m, midpoint_iterations, plot_inbetween, n, min_periastron, initial_guesses)
+            periastron_solution = Optimization.calc_periastron(r_value, theta_0_val, alpha, m, midpoint_iterations, plot_inbetween, image_order, min_periastron, initial_guesses)
             
             if periastron_solution is None or periastron_solution <= 2*m:
                 return GeometricFunctions.ellipse(r_value, alpha, theta_0_val) if use_ellipse else np.nan
             elif periastron_solution > 2*m:
-                return NumericalFunctions.calc_b_from_periastron(periastron_solution, m)
+                return NumericalFunctions.calculate_impact_parameter(periastron_solution, m)
             else:
-                raise ValueError(f"No solution was found for the periastron at (r, a) = ({r_value}, {alpha}) and incl={theta_0_val}")
+                raise ValueError(f"No solution was found for the periastron at (radius, argument) = ({r_value}, {alpha}) and inclination={theta_0_val}")
         
         # Apply the function element-wise
         vectorized_calc_b = np.vectorize(calc_b)

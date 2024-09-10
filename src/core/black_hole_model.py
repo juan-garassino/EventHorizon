@@ -8,18 +8,18 @@ from typing import Dict, List, Optional
 import numpy as np
 
 class BlackHole(BaseModel):
-    def __init__(self, config: dict, mass: float, inclination: float, acc: float):
+    def __init__(self, config: dict, mass: float, inclination: float, accretion_rate: float):
         super().__init__(config)
         self.mass = mass
         self.inclination = inclination
-        self.acc = acc
+        self.accretion_rate = accretion_rate
         self.disk_outer_edge = DiskEdge(config, 50*mass, inclination, mass, 0)
         self.disk_inner_edge = DiskEdge(config, 6*mass, inclination, mass, 0)
         self.disk_apparent_inner_edge = DiskEdge(config, 3*mass, inclination, mass, 0)
         self.isoradials: Dict[float, Dict[int, Isoradial]] = {}
         self.isoredshifts: Dict[float, Isoredshift] = {}
         if self.config.get('verbose', False):
-            print(f"Initialized BlackHole with mass: {mass}, inclination: {inclination}, acc: {acc}")
+            print(f"Initialized BlackHole with mass: {mass}, inclination: {inclination}, accretion_rate: {accretion_rate}")
             print(f"Disk edges - Outer: {50*mass}M, Inner: {6*mass}M, Apparent Inner: {3*mass}M")
 
     def add_isoradial(self, isoradial: Isoradial, radius: float, order: int):

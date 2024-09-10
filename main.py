@@ -51,8 +51,8 @@ params = {
         "line_color": "white",  # Color of the plotted lines
         "text_color": "white",  # Color of the text in the plot
         "alpha": 1.0,  # Opacity of the plotted lines
-        "show_grid": False,  # Whether to show a grid on the plot
-        "legend": False,  # Whether to show a legend on the plot
+        "show_grid": False,  # Whether to show argument grid on the plot
+        "legend": False,  # Whether to show argument legend on the plot
         "orig_background": False,  # Whether to use the original background (if applicable)
         "plot_disk_edges": True,  # Whether to plot the edges of the accretion disk
         "ax_lim": [-100, 100],  # Limits of the x and y axes
@@ -83,7 +83,7 @@ def plot_isoradial_redshift():
     plotter.save_plot("isoradial_redshift.png")
 
 def plot_blackhole_isoradials():
-    blackhole = BlackHole(params, mass=M, inclination=inclination, acc=1e-8)
+    blackhole = BlackHole(params, mass=M, inclination=inclination, accretion_rate=1e-8)
     
     direct_r = list(range(5, 101, 10))
     ghost_r = list(range(5, 101, 20))
@@ -95,7 +95,7 @@ def plot_blackhole_isoradials():
     plotter.save_plot("blackhole_isoradials.png")
 
 def plot_blackhole_isoredshifts():
-    blackhole = BlackHole(params, mass=M, inclination=inclination, acc=1e-8)
+    blackhole = BlackHole(params, mass=M, inclination=inclination, accretion_rate=1e-8)
     
     redshifts = [-0.5, -0.35, -0.15, 0.0, 0.15, 0.25, 0.5, 0.75, 1.0]
     
@@ -106,7 +106,7 @@ def plot_blackhole_isoredshifts():
     plotter.save_plot("blackhole_isoredshifts.png")
 
 def plot_improved_isoredshift():
-    blackhole = BlackHole(params, mass=M, inclination=85 * np.pi / 180, acc=1e-8)
+    blackhole = BlackHole(params, mass=M, inclination=85 * np.pi / 180, accretion_rate=1e-8)
     
     redshift = 0.5
     isoredshift = Isoredshift(params, blackhole.inclination, redshift, blackhole.mass)

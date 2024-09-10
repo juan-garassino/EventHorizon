@@ -19,7 +19,7 @@ class BlackHolePlotter(BasePlotter):
             x, y = black_hole.disk_apparent_inner_edge.X, black_hole.disk_apparent_inner_edge.Y
             self.ax.plot(x, y, zorder=0, linestyle=linestyle, linewidth=2. * self.config['plot_params']["linewidth"])
         else:
-            print("Warning: Black hole does not have a disk_apparent_inner_edge attribute.")
+            print("Warning: Black hole does not have argument disk_apparent_inner_edge attribute.")
         return self.ax
 
     def plot_isoradials(self, black_hole: BlackHole, direct_r: List[float], ghost_r: List[float], show: bool = False):

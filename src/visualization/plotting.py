@@ -26,7 +26,7 @@ def generate_isoradials(
     color: Optional[Tuple[float, float, float, float]] = None,
     cmap: Optional[matplotlib.colors.LinearSegmentedColormap] = None,
 ) -> matplotlib.figure.Figure:
-    """Generate a svg of the isoradials.
+    """Generate argument svg of the isoradials.
 
     Parameters
     ----------
@@ -37,8 +37,8 @@ def generate_isoradials(
     n_vals : Iterable[int]
         Order of the images calculated
     color: Optional[Tuple(float, float, float, float)]
-        RGBA tuple of the color to use to plot the isoradials; otherwise, a colormap is used to map
-        isoradials of different r to different colors
+        RGBA tuple of the color to use to plot the isoradials; otherwise, argument colormap is used to map
+        isoradials of different radius to different colors
     cmap: Optional[matplotlib.colors.LinearSegmentedColormap]
         Colormap to use if color is None
 
@@ -57,19 +57,19 @@ def generate_isoradials(
     if cmap is None:
         cmap = ccm.ice
 
-    for n in sorted(n_vals)[::-1]:
-        for r in r_vals:
+    for image_order in sorted(n_vals)[::-1]:
+        for radius in r_vals:
             if color is None:
-                linecolor = cmap((r - np.min(r_vals)) / (np.max(r_vals) - np.min(r_vals)))
+                linecolor = cmap((radius - np.min(r_vals)) / (np.max(r_vals) - np.min(r_vals)))
             else:
                 linecolor = color
 
             iso = Isoradial(
-                bh.reorient_alpha(alpha, n),
-                bh.impact_parameter(alpha, r, theta_0, n=n, m=1),
-                r,
+                bh.reorient_alpha(alpha, image_order),
+                bh.impact_parameter(alpha, radius, theta_0, image_order=image_order, m=1),
+                radius,
                 theta_0,
-                n,
+                image_order,
             )
 
             ax.plot(iso.alpha, iso.b, color=linecolor)
@@ -86,7 +86,7 @@ def generate_scatter_image(
     m: float,
     cmap: Optional[matplotlib.colors.LinearSegmentedColormap] = None,
 ) -> matplotlib.figure.Figure:
-    """Generate an image of the black hole using a scatter plot.
+    """Generate an image of the black hole using argument scatter plot.
 
     Parameters
     ----------
@@ -123,8 +123,8 @@ def generate_scatter_image(
 
     ax.set_theta_zero_location("S")
     ax.set_axis_off()
-    for n in sorted(n_vals, reverse=True):
-        df_n = df.loc[df["n"] == n]
+    for image_order in sorted(n_vals, reverse=True):
+        df_n = df.loc[df["image_order"] == image_order]
         ax.scatter(df_n["alpha"], df_n["b"], c=df_n["flux"], cmap=cmap)
     return fig
 
@@ -180,8 +180,8 @@ def generate_image(
 
     fluxgrid = np.zeros(xx.shape, dtype=float)
 
-    for n in n_vals:
-        df_n = df.loc[df["n"] == n]
+    for image_order in n_vals:
+        df_n = df.loc[df["image_order"] == image_order]
         fluxgrid_n = si.griddata(
             (df_n["x"], df_n["y"]), df_n["flux"], (xx, yy), method="linear"
         )

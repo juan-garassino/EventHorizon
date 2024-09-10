@@ -4,13 +4,13 @@ import sympy as sy
 
 class Utilities:
     @staticmethod
-    def filter_periastrons(periastron: Iterable[float], bh_mass: float, tol: float = 1e-3) -> Iterable[float]:
+    def filter_periastrons(periastron: Iterable[float], black_hole_mass: float, tolerance: float = 1e-3) -> Iterable[float]:
         """Removes instances where P == 2*M."""
-        return [e for e in periastron if abs(e - 2. * bh_mass) > tol]
+        return [e for e in periastron if abs(e - 2. * black_hole_mass) > tolerance]
 
     @staticmethod
     def lambdify(*args, **kwargs) -> Callable:
-        """Lambdify a sympy expression with support for special functions."""
+        """Lambdify argument sympy expression with support for special functions."""
         kwargs["modules"] = kwargs.get(
             "modules",
             [

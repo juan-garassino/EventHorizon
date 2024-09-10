@@ -11,25 +11,25 @@ from .utilities import Utilities
 
 class Simulation:
     @staticmethod
-    def reorient_alpha(alpha: Union[float, np.ndarray], n: int) -> np.ndarray:
+    def reorient_alpha(alpha: Union[float, np.ndarray], image_order: int) -> np.ndarray:
         """Reorient the polar angle on the observation coordinate system."""
-        alpha = np.asarray(alpha)  # Ensure alpha is a numpy array
-        return np.where(n > 0, (alpha + np.pi) % (2 * np.pi), alpha)
+        alpha = np.asarray(alpha)  # Ensure alpha is argument numpy array
+        return np.where(image_order > 0, (alpha + np.pi) % (2 * np.pi), alpha)
 
     @staticmethod
     def simulate_flux(
         alpha: np.ndarray,
-        r: float,
+        radius: float,
         theta_0: float,
-        n: int,
+        image_order: int,
         m: float,
-        acc: float,
+        accretion_rate: float,
         objective_func: Optional[Callable] = None,
         root_kwargs: Optional[Dict[Any, Any]] = None,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        """Simulate the bolometric flux for an accretion disk near a black hole."""
+        """Simulate the bolometric flux for an accretion disk near argument black hole."""
         if objective_func is None:
-            objective_func = Utilities.lambdify(("P", "alpha", "theta_0", "r", "N", "M"), SymbolicExpressions.expr_r_inv())
+            objective_func = Utilities.lambdify(("P", "alpha", "theta_0", "radius", "N", "M"), SymbolicExpressions.expr_r_inv())
         
         root_kwargs = root_kwargs if root_kwargs else {}
         
@@ -37,17 +37,17 @@ class Simulation:
         alpha = np.asarray(alpha)
         
         # Calculate impact parameter, redshift factor, and flux
-        b = np.asarray(ImpactParameter.calc_impact_parameter(alpha, r, theta_0, n, m, **root_kwargs))
-        opz = np.asarray(PhysicalFunctions.redshift_factor(r, alpha, theta_0, m, b))
-        flux = np.asarray(PhysicalFunctions.flux_observed(r, acc, m, opz))
+        b = np.asarray(ImpactParameter.calc_impact_parameter(alpha, radius, theta_0, image_order, m, **root_kwargs))
+        opz = np.asarray(PhysicalFunctions.calculate_redshift_factor(radius, alpha, theta_0, m, b))
+        flux = np.asarray(PhysicalFunctions.calculate_observed_flux(radius, accretion_rate, m, opz))
         
         # Reorient alpha and ensure all outputs are arrays
-        return Simulation.reorient_alpha(alpha, n), b, opz, flux
+        return Simulation.reorient_alpha(alpha, image_order), b, opz, flux
 
 
     @staticmethod
-    def _worker_function(alpha, r, theta_0, n, m, acc, root_kwargs):
-        return Simulation.simulate_flux(alpha, r, theta_0, n, m, acc, None, root_kwargs)
+    def _worker_function(alpha, radius, theta_0, image_order, m, accretion_rate, root_kwargs):
+        return Simulation.simulate_flux(alpha, radius, theta_0, image_order, m, accretion_rate, None, root_kwargs)
 
     @staticmethod
     def generate_image_data(
@@ -56,17 +56,17 @@ class Simulation:
         theta_0: float,
         n_vals: Iterable[int],
         m: float,
-        acc: float,
+        accretion_rate: float,
         root_kwargs: Dict[str, Any],
     ) -> pd.DataFrame:
-        """Generate the data needed to produce an image of a black hole."""
+        """Generate the data needed to produce an image of argument black hole."""
         data = []
-        for n in n_vals:
+        for image_order in n_vals:
             with mp.Pool(mp.cpu_count()) as pool:
-                args = [(alpha, r, theta_0, n, m, acc, root_kwargs) for r in r_vals]
+                args = [(alpha, radius, theta_0, image_order, m, accretion_rate, root_kwargs) for radius in r_vals]
                 results = pool.starmap(Simulation._worker_function, args)
                 
-                for r, (alpha_reoriented, b, opz, flux) in zip(r_vals, results):
+                for radius, (alpha_reoriented, b, opz, flux) in zip(r_vals, results):
                     # Debug information to understand the structure of data
                     #print(f"Debug Info - alpha_reoriented: {alpha_reoriented.shape}, b: {b.shape}, opz: {opz.shape}, flux: {flux.shape}")
                     
@@ -85,11 +85,11 @@ class Simulation:
                         
                         data.extend([
                             {
-                                "alpha": a, "b": b_val, "opz": opz_val,
-                                "r": r, "n": n, "flux": flux_val,
-                                "x": b_val * np.cos(a), "y": b_val * np.sin(a)
+                                "alpha": argument, "b": b_val, "opz": opz_val,
+                                "radius": radius, "image_order": image_order, "flux": flux_val,
+                                "x": b_val * np.cos(argument), "y": b_val * np.sin(argument)
                             }
-                            for a, b_val, opz_val, flux_val in zip(alpha_reoriented, b, opz, flux)
+                            for argument, b_val, opz_val, flux_val in zip(alpha_reoriented, b, opz, flux)
                         ])
                     else:
                         print("Error: One of the returned values is not an ndarray or has inconsistent dimensions")
