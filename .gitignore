@@ -1,0 +1,19 @@
+# Python bytecode files
+__pycache__/
+*.py[cod]
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# Virtual environments
+venv/
+env/
+.venv/
+ENV/
+pip-wheel-metadata/
+
+# Cache files
+*.cache
+*.log
+*.bak
+*.tmp
