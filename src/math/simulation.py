@@ -68,7 +68,7 @@ class Simulation:
                 
                 for r, (alpha_reoriented, b, opz, flux) in zip(r_vals, results):
                     # Debug information to understand the structure of data
-                    print(f"Debug Info - alpha_reoriented: {alpha_reoriented.shape}, b: {b.shape}, opz: {opz.shape}, flux: {flux.shape}")
+                    #print(f"Debug Info - alpha_reoriented: {alpha_reoriented.shape}, b: {b.shape}, opz: {opz.shape}, flux: {flux.shape}")
                     
                     if (isinstance(alpha_reoriented, np.ndarray) and
                         isinstance(b, np.ndarray) and

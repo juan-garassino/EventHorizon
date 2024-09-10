@@ -2,8 +2,16 @@ import unittest
 import sympy as sy
 import numpy as np
 import pandas as pd
+import scipy.special as scp
 from unittest.mock import patch
-from src.math.black_hole_math import SymbolicExpressions, NumericalFunctions, GeometricFunctions, PhysicalFunctions, Utilities, Optimization, ImpactParameter, Simulation
+from src.math.symbolic_expressions import SymbolicExpressions
+from src.math.numerical_functions import NumericalFunctions
+from src.math.geometric_functions import GeometricFunctions
+from src.math.physical_functions import PhysicalFunctions
+from src.math.impact_parameter import ImpactParameter
+from src.math.utilities import Utilities
+from src.math.optimization import Optimization
+from src.math.simulation import Simulation
 
 class TestSymbolicExpressions(unittest.TestCase):
 
@@ -36,8 +44,8 @@ class TestSymbolicExpressions(unittest.TestCase):
         result = SymbolicExpressions.expr_gamma()
         self.assertEqual(result, expected)
 
-    @patch('src.math.black_hole_math.SymbolicExpressions.expr_zeta_inf')
-    @patch('src.math.black_hole_math.SymbolicExpressions.expr_k')
+    @patch('src.math.symbolic_expressions.SymbolicExpressions.expr_zeta_inf')
+    @patch('src.math.symbolic_expressions.SymbolicExpressions.expr_k')
     def test_expr_u(self, mock_k, mock_zeta_inf):
         # Mock the return values of expr_zeta_inf and expr_k
         mock_zeta_inf.return_value = sy.Symbol('zeta_inf')
@@ -166,10 +174,10 @@ class TestPhysicalFunctions(unittest.TestCase):
         self.incl = np.pi/3
         self.tol = 1e-6
 
-    @patch('src.math.black_hole_math.NumericalFunctions.zeta_inf')
-    @patch('src.math.black_hole_math.NumericalFunctions.calc_q')
-    @patch('src.math.black_hole_math.NumericalFunctions.k2')
-    @patch('src.math.black_hole_math.GeometricFunctions.cos_gamma')
+    @patch('src.math.numerical_functions.NumericalFunctions.zeta_inf')
+    @patch('src.math.numerical_functions.NumericalFunctions.calc_q')
+    @patch('src.math.numerical_functions.NumericalFunctions.k2')
+    @patch('src.math.geometric_functions.GeometricFunctions.cos_gamma')
     def test_eq13(self, mock_cos_gamma, mock_k2, mock_calc_q, mock_zeta_inf):
         mock_zeta_inf.return_value = 0.5
         mock_calc_q.return_value = 8.0
@@ -202,9 +210,9 @@ class TestPhysicalFunctions(unittest.TestCase):
         self.assertIsInstance(result, float)
         self.assertGreater(result, 0)  # Observed flux should be positive
 
-    @patch('src.math.black_hole_math.NumericalFunctions.calc_q')
-    @patch('src.math.black_hole_math.NumericalFunctions.k2')
-    @patch('src.math.black_hole_math.NumericalFunctions.zeta_inf')
+    @patch('src.math.numerical_functions.NumericalFunctions.calc_q')
+    @patch('src.math.numerical_functions.NumericalFunctions.k2')
+    @patch('src.math.numerical_functions.NumericalFunctions.zeta_inf')
     def test_phi_inf(self, mock_zeta_inf, mock_k2, mock_calc_q):
         mock_calc_q.return_value = 8.0
         mock_k2.return_value = 0.25
@@ -257,7 +265,7 @@ class TestOptimization(unittest.TestCase):
         result = Optimization.improve_solutions_midpoint(self.func, self.args, self.x, self.y, self.ind, 5)
         self.assertAlmostEqual(result, 2, delta=1e-2)  # Use delta or adjust as needed
 
-    @patch('src.math.black_hole_math.PhysicalFunctions.eq13')
+    @patch('src.math.physical_functions.PhysicalFunctions.eq13')
     def test_calc_periastron(self, mock_eq13):
         mock_eq13.return_value = 1  # Mock return value should be a valid number
         result = Optimization.calc_periastron(5, np.pi/4, np.pi/3, 1)
@@ -267,16 +275,16 @@ class TestOptimization(unittest.TestCase):
         self.assertGreater(result, 0)  # Example additional check if appropriate
 
 class TestImpactParameter(unittest.TestCase):
-    @patch('src.math.black_hole_math.Optimization.calc_periastron')
-    @patch('src.math.black_hole_math.NumericalFunctions.calc_b_from_periastron')
+    @patch('src.math.optimization.Optimization.calc_periastron')
+    @patch('src.math.numerical_functions.NumericalFunctions.calc_b_from_periastron')
     def test_calc_impact_parameter(self, mock_calc_b, mock_calc_periastron):
         mock_calc_periastron.return_value = 5
         mock_calc_b.return_value = 10
         result = ImpactParameter.calc_impact_parameter(np.pi/4, 10, np.pi/3, 0, 1)
         self.assertEqual(result, 10)
 
-    @patch('src.math.black_hole_math.Optimization.calc_periastron')
-    @patch('src.math.black_hole_math.GeometricFunctions.ellipse')
+    @patch('src.math.optimization.Optimization.calc_periastron')
+    @patch('src.math.geometric_functions.GeometricFunctions.ellipse')
     def test_calc_impact_parameter_ellipse(self, mock_ellipse, mock_calc_periastron):
         mock_calc_periastron.return_value = 1
         mock_ellipse.return_value = 5
@@ -291,9 +299,9 @@ class TestSimulation(unittest.TestCase):
         expected = np.array([np.pi, 3*np.pi/2, 0, np.pi/2])
         np.testing.assert_array_almost_equal(result, expected)
 
-    @patch('src.math.black_hole_math.ImpactParameter.calc_impact_parameter')
-    @patch('src.math.black_hole_math.PhysicalFunctions.redshift_factor')
-    @patch('src.math.black_hole_math.PhysicalFunctions.flux_observed')
+    @patch('src.math.impact_parameter.ImpactParameter.calc_impact_parameter')
+    @patch('src.math.physical_functions.PhysicalFunctions.redshift_factor')
+    @patch('src.math.physical_functions.PhysicalFunctions.flux_observed')
     def test_simulate_flux(self, mock_flux_observed, mock_redshift_factor, mock_calc_impact_parameter):
         alpha = np.array([0, np.pi/2, np.pi, 3*np.pi/2])
         r = 10
@@ -313,7 +321,7 @@ class TestSimulation(unittest.TestCase):
         self.assertEqual(result[2].shape, (4,))
         self.assertEqual(result[3].shape, (4,))
 
-    @patch('src.math.black_hole_math.Simulation.simulate_flux')
+    @patch('src.math.simulation.Simulation.simulate_flux')
     def test_generate_image_data(self, mock_simulate_flux):
         alpha = np.array([0, np.pi/2, np.pi, 3*np.pi/2])
         r_vals = [10, 20]

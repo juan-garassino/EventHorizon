@@ -101,7 +101,7 @@ class PhysicalFunctions:
         q = NumericalFunctions.calc_q(periastron, M, verbose)
         ksq = NumericalFunctions.k2(periastron, M, verbose)
         z_inf = NumericalFunctions.zeta_inf(periastron, M, verbose)
-        result = 2. * (np.sqrt(periastron / q)) * (sp.ellipk(ksq) - sp.ellipkinc(z_inf, ksq))
+        result = 2. * (np.sqrt(periastron / q)) * (scp.ellipk(ksq) - scp.ellipkinc(z_inf, ksq))
         if verbose:
             print(f"phi_inf input: periastron: {periastron}, M: {M}")
             print(f"phi_inf result: {result}")
