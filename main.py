@@ -60,6 +60,7 @@ params = {
         "title": "Black Hole Visualization",  # Add this line
         "dpi": 300,  # Add this line
         "results_folder": "results",  # Folder to save the generated plots
+        "verbose": False,  # Add this line
     },
 }
 
@@ -116,6 +117,34 @@ def plot_improved_isoredshift():
     ax.set_title(f"Improved Isoredshift (z = {redshift})")
     plotter.save_plot("improved_isoredshift.png")
 
+def plot_isoradials():
+    plotter = IsoradialPlotter(params, verbose=verbose)
+    th0 = 75 * np.pi / 180
+    radii = np.linspace(5, 100, 20)
+    image_orders = [0, 1]
+    fig = plotter.generate_isoradials(th0, radii, image_orders)
+    plotter.save_plot("isoradials.png")
+
+def plot_scatter_image():
+    plotter = IsoredshiftPlotter(params, verbose=verbose)
+    alpha = np.linspace(0, 2*np.pi, 1000)
+    radii = np.linspace(5, 100, 20)
+    th0 = 75 * np.pi / 180
+    image_orders = [0, 1]
+    black_hole_mass = M
+    fig = plotter.generate_scatter_image(None, alpha, radii, th0, image_orders, black_hole_mass)
+    plotter.save_plot("scatter_image.png")
+
+def plot_black_hole_image():
+    plotter = IsoredshiftPlotter(params, verbose=verbose)
+    alpha = np.linspace(0, 2*np.pi, 1000)
+    radii = np.linspace(5, 100, 20)
+    th0 = 75 * np.pi / 180
+    image_orders = [0, 1]
+    black_hole_mass = M
+    fig = plotter.generate_image(None, alpha, radii, th0, image_orders, black_hole_mass, None)
+    plotter.save_plot("black_hole_image.png")
+
 def main():
     print("Plotting single isoradial...")
     plot_single_isoradial()
@@ -131,6 +160,15 @@ def main():
     
     print("Plotting improved isoredshift...")
     plot_improved_isoredshift()
+
+    print("Plotting isoradials...")
+    plot_isoradials()
+
+    print("Plotting scatter image...")
+    plot_scatter_image()
+
+    print("Plotting black hole image...")
+    plot_black_hole_image()
 
 if __name__ == "__main__":
     main()
