@@ -17,3 +17,14 @@ pip-wheel-metadata/
 *.log
 *.bak
 *.tmp
+
+# Media files
+*.png
+*.jpg
+*.jpeg
+*.mp4
+*.gif
+*.bmp
+*.svg
+*.tiff
+*.webp
