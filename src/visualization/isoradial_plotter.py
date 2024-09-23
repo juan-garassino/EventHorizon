@@ -9,7 +9,7 @@ from typing import Optional, Tuple
 
 class IsoradialPlotter(BasePlotter):
     def plot(self, isoradial: Isoradial, ax: Optional[plt.Axes] = None, 
-             colornorm: Tuple[float, float] = (0, 1), alpha: float = 1.0):
+             colornorm: Tuple[float, float] = (0, 1), alpha: float = 1.0, linewidth: float = 1.0):
         if ax is None:
             ax = self.ax
         
@@ -17,11 +17,12 @@ class IsoradialPlotter(BasePlotter):
         if self.config['plot_params']['redshift']:
             line = self._colorline(ax, isoradial.X, isoradial.Y, 
                             z=[e - 1 for e in isoradial.redshift_factors],
-                            cmap=plt.get_cmap('RdBu_r'), alpha=alpha)
+                            cmap=plt.get_cmap('RdBu_r'), alpha=alpha, linewidth=linewidth)
             line.set_label(label)
         else:
             line, = ax.plot(isoradial.X, isoradial.Y, color=self.config['plot_params']['line_color'],
-                    alpha=alpha, linestyle=self.config['plot_params']['linestyle'], label=label)
+                            alpha=alpha, linestyle=self.config['plot_params']['linestyle'], label=label,
+                            linewidth=linewidth)
         
         if self.config['plot_params']['legend']:
             ax.legend(prop={'size': 16})
@@ -39,7 +40,7 @@ class IsoradialPlotter(BasePlotter):
         return segments
 
     def _colorline(self, ax, x, y, z=None, cmap=plt.get_cmap('RdBu_r'), 
-                   norm=plt.Normalize(0, 1), alpha=1.0, linewidth=3):
+                   norm=plt.Normalize(0, 1), alpha=1.0, linewidth: float = 3.0):
         if z is None:
             z = np.linspace(0.0, 1.0, len(x))
     
@@ -50,13 +51,13 @@ class IsoradialPlotter(BasePlotter):
         return lc
 
     def plot_redshift(self, isoradial: Isoradial, fig: Optional[plt.Figure] = None, 
-                      ax: Optional[plt.Axes] = None, show: bool = True):
+                      ax: Optional[plt.Axes] = None, show: bool = True, linewidth: float = 1.0):
         if fig is None:
             fig = self.fig
         if ax is None:
             ax = self.ax
         
-        ax.plot(isoradial.angles, [z - 1 for z in isoradial.redshift_factors])
+        ax.plot(isoradial.angles, [z - 1 for z in isoradial.redshift_factors], linewidth=linewidth)
         ax.set_title("Redshift values for isoradial\nR={} | M = {}".format(isoradial.radius, isoradial.mass))
         ax.set_xlim([0, 2 * np.pi])
         

@@ -91,7 +91,7 @@ def plot_blackhole_isoradials():
     blackhole.calc_isoradials(direct_r, ghost_r)
     
     plotter = BlackHolePlotter(params)
-    ax = plotter.plot_isoradials(blackhole, direct_r, ghost_r)
+    ax = plotter.plot_isoradials(blackhole, direct_r, ghost_r, 0.2)
     plotter.save_plot("blackhole_isoradials.png")
 
 def plot_blackhole_isoredshifts():
@@ -126,8 +126,8 @@ def main():
     print("Plotting black hole isoradials...")
     plot_blackhole_isoradials()
     
-    print("Plotting black hole isoredshifts...")
-    plot_blackhole_isoredshifts()
+    # print("Plotting black hole isoredshifts...")
+    # plot_blackhole_isoredshifts()
     
     print("Plotting improved isoredshift...")
     plot_improved_isoredshift()
