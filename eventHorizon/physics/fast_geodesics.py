@@ -22,7 +22,8 @@ from typing import Tuple, Optional
 # ---------------------------------------------------------------------------
 
 def cos_gamma_vec(alpha: np.ndarray, inclination: float) -> np.ndarray:
-    """Vectorized cos(gamma) from Luminet eq.13 geometry."""
+    """Vectorized cos(gamma) = cos(alpha) / sqrt(cos^2(alpha) + cot^2(i)),
+    Luminet (1979) eq.10. Returns 0 for a face-on observer (i = 0)."""
     cos_a = np.cos(alpha)
     tan_i = np.tan(inclination)
     # Guard against inclination ≈ 0 (face-on)
@@ -35,9 +36,14 @@ def redshift_vec(r: np.ndarray, alpha: np.ndarray,
                  inclination: float, mass: float,
                  b: np.ndarray) -> np.ndarray:
     """
-    Vectorized (1+z) — Luminet eq.19.
+    Vectorized (1+z) — Luminet (1979) eq.19.
 
     (1+z) = (1 + sqrt(M/r^3) * b * sin(incl) * sin(alpha)) / sqrt(1 - 3M/r)
+
+    1/sqrt(1 - 3M/r) is u^t of a circular Keplerian orbit (gravitational
+    redshift + transverse Doppler of the orbiting gas), so at sin(alpha) = 0
+    g = 1/(1+z) = sqrt(1 - 3M/r), i.e. sqrt(1/2) at the ISCO. Non-physical
+    results (r <= 3M or 1+z <= 0) are returned as 1.
     """
     orbital = np.sqrt(mass / r ** 3) * b * np.sin(inclination) * np.sin(alpha)
     with np.errstate(divide='ignore', invalid='ignore'):
@@ -50,8 +56,14 @@ def redshift_vec(r: np.ndarray, alpha: np.ndarray,
 def flux_intrinsic_vec(r: np.ndarray, mass: float,
                        accretion_rate: float = 1.0) -> np.ndarray:
     """
-    Vectorized Novikov-Thorne intrinsic flux with logarithmic correction.
-    Returns 0 for r <= 6M (inside ISCO).
+    Vectorized Novikov-Thorne intrinsic flux, Page & Thorne (1974) eq.15n:
+
+        F_s = (3 M mdot / 8 pi) / ((r* - 3) r^(5/2))
+              * [sqrt(r*) - sqrt(6) + (sqrt(3)/2) ln(
+                   (sqrt(r*) + sqrt(3))(sqrt(6) - sqrt(3)) /
+                   ((sqrt(r*) - sqrt(3))(sqrt(6) + sqrt(3))))],   r* = r/M
+
+    Zero at the ISCO r = 6M, maximum at r = 9.55M. Returns 0 for r <= 6M.
     """
     r_ = r / mass
     sqrt_r = np.sqrt(r_)
@@ -75,7 +87,11 @@ def flux_intrinsic_vec(r: np.ndarray, mass: float,
 def flux_observed_vec(r: np.ndarray, mass: float,
                       redshift: np.ndarray,
                       accretion_rate: float = 1.0) -> np.ndarray:
-    """Vectorized F_obs = F_intrinsic / (1+z)^4."""
+    """Vectorized F_obs = F_intrinsic / (1+z)^4 (Luminet 1979 sec. 4).
+
+    One power of (1+z) each for photon energy and arrival rate, two for
+    the solid-angle (aberration) correction.
+    """
     f_intr = flux_intrinsic_vec(r, mass, accretion_rate)
     with np.errstate(divide='ignore', invalid='ignore'):
         result = f_intr / redshift ** 4
@@ -85,6 +101,24 @@ def flux_observed_vec(r: np.ndarray, mass: float,
 # ---------------------------------------------------------------------------
 # Lookup-table builder for impact parameter b(alpha, r)
 # ---------------------------------------------------------------------------
+
+
+def impact_table_interpolator(alpha_grid: np.ndarray, r_grid: np.ndarray,
+                              table: np.ndarray) -> RegularGridInterpolator:
+    """Linear interpolator for b(alpha, r) that is periodic in alpha.
+
+    Table builders sample alpha on [0, 2*pi) with ``endpoint=False``. b is
+    2*pi-periodic in alpha (for every image order), so the alpha = 2*pi row
+    is a copy of alpha = 0; without it every query in the last grid cell
+    (alpha > alpha_grid[-1]) returned NaN and was dropped, leaving an empty
+    wedge of width 2*pi/n_alpha at the bottom of the image.
+    """
+    alpha_closed = np.append(alpha_grid, alpha_grid[0] + 2 * np.pi)
+    table_closed = np.vstack([table, table[:1]])
+    return RegularGridInterpolator(
+        (alpha_closed, r_grid), table_closed,
+        method='linear', bounds_error=False, fill_value=np.nan,
+    )
 
 def build_impact_table(
     mass: float,
@@ -116,7 +150,8 @@ def build_impact_table(
     r_min, r_max : float or None
         Disk radii range (defaults to ISCO..50M).
     p_grid_size : int
-        Number of periastron scan points passed to fast_root.
+        Unused (kept for API compatibility): the pure-Python path scans
+        P in [2.1M, 50M] with 1000 points inside ``impact_parameter``.
 
     Returns
     -------
@@ -138,10 +173,7 @@ def build_impact_table(
             n_alpha=n_alpha, n_r=n_r,
             r_min=r_min, r_max=r_max,
         )
-        interp = RegularGridInterpolator(
-            (alpha_grid, r_grid), table,
-            method='linear', bounds_error=False, fill_value=np.nan,
-        )
+        interp = impact_table_interpolator(alpha_grid, r_grid, table)
         return interp, alpha_grid, r_grid
     except ImportError:
         pass
@@ -156,8 +188,6 @@ def build_impact_table(
 
     table = np.empty((n_alpha, n_r), dtype=np.float64)
 
-    p_scan = np.linspace(2.1, max(50.0, 3.0 * r_max / mass), p_grid_size)
-
     for j, r_val in enumerate(r_grid):
         b_arr = impact_parameter(
             alpha_grid, r_val, inclination, n, mass,
@@ -165,10 +195,7 @@ def build_impact_table(
         )
         table[:, j] = b_arr
 
-    interp = RegularGridInterpolator(
-        (alpha_grid, r_grid), table,
-        method='linear', bounds_error=False, fill_value=np.nan,
-    )
+    interp = impact_table_interpolator(alpha_grid, r_grid, table)
     return interp, alpha_grid, r_grid
 
 

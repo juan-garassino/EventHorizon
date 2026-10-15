@@ -416,7 +416,6 @@ class LuminetPointsHandler(VisualizationHandler):
         # --- Fast path: vectorized lookup table ---
         try:
             from ..math.fast_geodesics import generate_particles_fast, build_impact_table
-            from scipy.interpolate import RegularGridInterpolator
 
             # Try Cython-accelerated table builder first
             table_direct = None
@@ -428,10 +427,8 @@ class LuminetPointsHandler(VisualizationHandler):
                     table, alpha_g, r_g = cy_build_impact_table(
                         mass, incl, n, n_alpha=200, n_r=100,
                     )
-                    return RegularGridInterpolator(
-                        (alpha_g, r_g), table,
-                        method='linear', bounds_error=False, fill_value=np.nan,
-                    )
+                    from ..math.fast_geodesics import impact_table_interpolator
+                    return impact_table_interpolator(alpha_g, r_g, table)
 
                 table_direct = _cy_interp(self.mass, inclination_rad, 0)
                 table_ghost = _cy_interp(self.mass, inclination_rad, 1) if show_ghost_image else None
@@ -835,8 +832,6 @@ class IsoradialHandler(VisualizationHandler):
 
         Tries Cython first, falls back to pure-Python, returns None if both fail.
         """
-        from scipy.interpolate import RegularGridInterpolator as RGI
-
         r_min = max(min(radii) - 0.1, 3.01 * mass)
         r_max = max(radii) + 0.1
         n_r = max(len(radii) * 4, 50)
@@ -848,10 +843,8 @@ class IsoradialHandler(VisualizationHandler):
                 n_alpha=n_alpha, n_r=n_r,
                 r_min=r_min, r_max=r_max,
             )
-            return RGI(
-                (alpha_grid, r_grid), table,
-                method='linear', bounds_error=False, fill_value=np.nan,
-            )
+            from ..math.fast_geodesics import impact_table_interpolator
+            return impact_table_interpolator(alpha_grid, r_grid, table)
         except ImportError:
             pass
 
@@ -977,7 +970,11 @@ class IsoradialHandler(VisualizationHandler):
             except Exception:
                 continue
 
-        # --- Ghost isoradials (image_order=1, dashed, Y-flipped) ---
+        # --- Ghost isoradials (image_order=1, dashed) ---
+        # No Y flip: the ghost is already flipped once inside the eq.13 solve
+        # (alpha + pi for odd orders), so (b, alpha) is its plate position.
+        # Negating Y as well drew the wide part of the ghost above the shadow
+        # instead of below it (cf. Luminet 1979 Fig. 6).
         if show_ghost:
             for radius in radii:
                 try:
@@ -987,7 +984,7 @@ class IsoradialHandler(VisualizationHandler):
                     )
                     if len(impact_params) > 3:
                         x = [b * np.cos(a - np.pi / 2) for b, a in zip(impact_params, valid_angles)]
-                        y = [-b * np.sin(a - np.pi / 2) for b, a in zip(impact_params, valid_angles)]
+                        y = [b * np.sin(a - np.pi / 2) for b, a in zip(impact_params, valid_angles)]
 
                         all_polylines.append(list(zip(x, y)))
 

@@ -219,7 +219,6 @@ class LuminetPointsHandler(VisualizationHandler):
         # --- Fast path: vectorized lookup table ---
         try:
             from ..physics.fast_geodesics import generate_particles_fast, build_impact_table
-            from scipy.interpolate import RegularGridInterpolator
 
             table_direct = None
             table_ghost = None
@@ -230,10 +229,8 @@ class LuminetPointsHandler(VisualizationHandler):
                     table, alpha_g, r_g = cy_build_impact_table(
                         mass, incl, n, n_alpha=200, n_r=100,
                     )
-                    return RegularGridInterpolator(
-                        (alpha_g, r_g), table,
-                        method='linear', bounds_error=False, fill_value=np.nan,
-                    )
+                    from ..physics.fast_geodesics import impact_table_interpolator
+                    return impact_table_interpolator(alpha_g, r_g, table)
 
                 table_direct = _cy_interp(self.mass, inclination_rad, 0)
                 table_ghost = _cy_interp(self.mass, inclination_rad, 1) if show_ghost_image else None
