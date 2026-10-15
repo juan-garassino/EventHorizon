@@ -118,8 +118,16 @@ Breaking this down:
   - Positive for receding gas (redshift), negative for approaching (blueshift)
 
 - **Gravitational term**: `[1 - 3M/r]^{-1/2}`
-  - Always > 1 (gravitational redshift)
-  - Diverges at r = 3M (photon sphere)
+  - This is u^t of a circular Keplerian orbit,
+    `u^t = (1 - 2M/r - r^2 Omega^2)^{-1/2}` with `Omega = sqrt(M/r^3)`:
+    gravitational redshift *plus* the transverse Doppler shift of the
+    orbiting gas. It is deliberately not the static-emitter factor
+    `[1 - 2M/r]^{-1/2}`. At the ISCO, sqrt(1 - 3M/r) = sqrt(1/2) ~ 0.707.
+  - Always > 1, tends to 1 far from the hole, diverges at r = 3M
+  - The same expression is implemented in `redshift_vec`,
+    `disk_physics.redshift_factor` and `geodesics.expr_one_plus_z`
+    (checked against u^t (1 + Omega L/E) in
+    `tests/test_physics_ground_truth.py`)
 
 When (1+z) < 1, the light is blueshifted (brighter). When (1+z) > 1, it is
 redshifted (dimmer). This is why the left side of the disk appears much
@@ -134,7 +142,7 @@ formula with the full logarithmic correction:
 
 ```
 F_intrinsic = (3M * mdot) / (8 * pi) * 1/((r/M - 3) * r^{5/2}) *
-              [sqrt(r/M) - sqrt(6) + (1/sqrt(3)) * ln(L)]
+              [sqrt(r/M) - sqrt(6) + (sqrt(3)/2) * ln(L)]
 ```
 
 where:
@@ -143,7 +151,16 @@ L = [(sqrt(r/M) + sqrt(3)) * (sqrt(6) - sqrt(3))] /
     [(sqrt(r/M) - sqrt(3)) * (sqrt(6) + sqrt(3))]
 ```
 
-This is zero at the ISCO (r = 6M) and peaks at around r = 9M.
+This is zero at the ISCO (r = 6M) and peaks at r = 9.55M. The log-term
+factor is sqrt(3)/2 (Page & Thorne 1974); the sqrt(3)/3 printed in
+Luminet (1979) eq. 15 is a typo. The implementation agrees with a direct
+numerical evaluation of the Page-Thorne conservation-law integral to 1e-6
+(see `tests/test_physics_ground_truth.py`).
+
+Because the zero-torque inner boundary suppresses the flux near the ISCO,
+the local temperature T ~ F^{1/4} is *lower* at 7M than at 15M
+(F(7M)/F(15M) ~ 0.73). Only the Newtonian Shakura-Sunyaev profile
+T^4 ~ r^-3 (1 - sqrt(6M/r)) has T(7M) > T(15M).
 
 ### Observed flux
 
@@ -164,7 +181,15 @@ suppresses the receding side.
 
 Light that passes behind the black hole and wraps around by more than
 pi radians creates a secondary image. In the code this is the n=1 solution
-to eq. 13. Ghost particles appear below the main disk (Y-flipped) and
+to eq. 13. A ghost photon arriving at plate position (b, alpha) sweeps
+pi + gamma(alpha) around the hole before reaching the disk, half a turn
+more than the direct photon at the same alpha. Eq. 13's n=1 branch encodes
+a sweep of 2*pi - gamma, so it is evaluated at alpha + pi (since
+gamma(alpha + pi) = pi - gamma(alpha)); the resulting b is then plotted at
+plate angle alpha with no further flip. The wide part of the ghost image
+is therefore below the shadow (the underside of the far disk) and the thin
+part hugs the photon ring above it. This geometry is checked by direct
+orbit integration in `tests/test_physics_ground_truth.py`. Ghost particles
 are plotted with reduced opacity.
 
 Ghost particles are filtered by the apparent inner edge: those inside

@@ -213,19 +213,22 @@ def check_visual_features():
     except Exception as e:
         print(f"[ERROR] Ghost image check: {e}\n")
 
-    # Check C: Dark center (no flux inside critical curve)
+    # Check C: Shadow edge. The ghost (n=1) image hugs the photon ring from
+    # outside, so its innermost b sits just above b_crit. (The direct image
+    # of the near side legitimately crosses in front of the shadow with
+    # b < b_crit, Luminet 1979 Fig. 4 trajectory 3, so it is not used here.)
     try:
         b_crit = 3 * np.sqrt(3) * M
-        _, b_out, _, flux = simulate_flux(alpha, 6.5, INCL, 0, M)
-        all_outside = np.all(b_out[np.isfinite(b_out)] >= b_crit * 0.95)
+        _, b_out, _, _ = simulate_flux(alpha, 6.5, INCL, 1, M)
+        b_min = np.nanmin(b_out)
+        ok = b_crit <= b_min < 1.1 * b_crit
 
-        print(f"[{'PASS' if all_outside else 'WARN'}] Dark center check (ISCO isoradial outside photon ring):")
+        print(f"[{'PASS' if ok else 'WARN'}] Shadow edge check (ghost isoradial just outside b_crit):")
         print(f"       b_crit = {b_crit:.4f}")
-        print(f"       min(b) at r=6.5M = {np.nanmin(b_out):.4f}")
+        print(f"       min(b) of ghost at r=6.5M = {b_min:.4f}")
         print()
     except Exception as e:
-        print(f"[ERROR] Dark center check: {e}\n")
-
+        print(f"[ERROR] Shadow edge check: {e}\n")
 
 if __name__ == "__main__":
     print("Rendering visual preview...")

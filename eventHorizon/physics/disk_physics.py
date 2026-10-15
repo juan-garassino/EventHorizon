@@ -9,7 +9,7 @@ from typing import Optional
 
 
 def cos_gamma(alpha: float, incl: float, tol: float = 1e-5) -> float:
-    """Compute cos(gamma) from Luminet eq.13 geometry."""
+    """cos(gamma) = cos(alpha) / sqrt(cos^2(alpha) + cot^2(incl)), Luminet (1979) eq.10."""
     if abs(incl) < tol:
         return 0
     return np.cos(alpha) / np.sqrt(np.cos(alpha) ** 2 + 1 / (np.tan(incl) ** 2))
@@ -20,6 +20,9 @@ def redshift_factor(r: float, alpha: float, incl: float, mass: float, b: float) 
     Calculate redshift factor (1+z) using Luminet eq.19.
 
     (1+z) = (1 + sqrt(M/r^3) * b * sin(incl) * sin(alpha)) / sqrt(1 - 3M/r)
+
+    Scalar twin of ``fast_geodesics.redshift_vec``; the denominator is the
+    orbiting-emitter factor 1/u^t, not the static sqrt(1 - 2M/r).
     """
     try:
         if r <= 3.0 * mass:
@@ -34,8 +37,9 @@ def redshift_factor(r: float, alpha: float, incl: float, mass: float, b: float) 
 
 def flux_intrinsic(r: float, accretion_rate: float, mass: float) -> float:
     """
-    Novikov-Thorne intrinsic flux with logarithmic correction.
-    Returns 0 for r <= 6M (inside ISCO).
+    Novikov-Thorne intrinsic flux, Page & Thorne (1974) eq.15n (Luminet 1979
+    eq.15 with the sqrt(3)/2 log factor). Scalar twin of
+    ``fast_geodesics.flux_intrinsic_vec``. Returns 0 for r <= 6M (inside ISCO).
     """
     try:
         r_ = r / mass
@@ -57,7 +61,7 @@ def flux_intrinsic(r: float, accretion_rate: float, mass: float) -> float:
 
 
 def flux_observed(r: float, accretion_rate: float, mass: float, redshift: float) -> float:
-    """Observed flux: F_obs = F_intrinsic / (1+z)^4."""
+    """Observed flux: F_obs = F_intrinsic / (1+z)^4 (Luminet 1979 sec. 4)."""
     try:
         f_intr = flux_intrinsic(r, accretion_rate, mass)
         if redshift <= 0:
@@ -68,23 +72,23 @@ def flux_observed(r: float, accretion_rate: float, mass: float, redshift: float)
 
 
 def calc_q(periastron: float, mass: float) -> float:
-    """Compute Q = sqrt((P - 2M)(P + 6M))."""
+    """Compute Q = sqrt((P - 2M)(P + 6M)) (Luminet 1979 eq.4)."""
     return np.sqrt((periastron - 2.0 * mass) * (periastron + 6.0 * mass))
 
 
 def calc_b_from_periastron(periastron: float, mass: float) -> float:
-    """Convert periastron to impact parameter: b = sqrt(P^3 / (P - 2M))."""
+    """Convert periastron to impact parameter: b = sqrt(P^3 / (P - 2M)) (Luminet 1979 eq.5)."""
     return np.sqrt(periastron ** 3 / (periastron - 2.0 * mass))
 
 
 def k2(periastron: float, mass: float) -> float:
-    """Elliptic integral modulus squared."""
+    """Elliptic modulus squared k^2 = (Q - P + 6M) / (2Q) (Luminet 1979 eq.12)."""
     q = calc_q(periastron, mass)
     return (q - periastron + 6 * mass) / (2 * q)
 
 
 def zeta_inf(periastron: float, mass: float) -> float:
-    """Compute zeta_inf for elliptic integral argument."""
+    """sin^2(zeta_inf) = (Q - P + 2M) / (Q - P + 6M) (Luminet 1979 eq.12)."""
     q = calc_q(periastron, mass)
     arg = (q - periastron + 2 * mass) / (q - periastron + 6 * mass)
     return np.arcsin(np.sqrt(arg))
@@ -92,7 +96,12 @@ def zeta_inf(periastron: float, mass: float) -> float:
 
 def eq13(periastron: float, ir_radius: float, ir_angle: float, incl: float,
          n: int, mass: float) -> float:
-    """Luminet eq.13 -- returns residual (0 at correct periastron)."""
+    """Luminet eq.13 -- returns residual 1 - r * (1/r)(P) (0 at correct periastron).
+
+    1/r = -(Q - P + 2M)/(4MP) + (Q - P + 6M)/(4MP) sn^2(u, k^2), with
+    u = gamma/(2 sqrt(P/Q)) + F(zeta_inf, k) for the direct image and
+    u = (gamma - 2 n pi)/(2 sqrt(P/Q)) - F(zeta_inf, k) + 2K(k) for order n.
+    """
     try:
         z_inf = zeta_inf(periastron, mass)
         q = calc_q(periastron, mass)
@@ -117,7 +126,7 @@ def eq13(periastron: float, ir_radius: float, ir_angle: float, incl: float,
 
 
 def ellipse_fallback(r: float, alpha: float, incl: float) -> float:
-    """Newtonian ellipse approximation fallback."""
+    """Newtonian limit of eq.13: b = r sin(gamma) (Luminet 1979 sec. 3)."""
     g = np.arccos(cos_gamma(alpha, incl))
     return r * np.sin(g)
 

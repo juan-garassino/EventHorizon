@@ -34,31 +34,42 @@ class GeodesicMethod(Enum):
 # ============================================================================
 
 def expr_q() -> sy.Symbol:
-    """Generate a sympy expression for Q."""
+    """Q = sqrt((P - 2M)(P + 6M)) for periastron P (Luminet 1979, eq.4)."""
     p, m = sy.symbols("P, M")
     return sy.sqrt((p - 2 * m) * (p + 6 * m))
 
 
 def expr_b() -> sy.Symbol:
-    """Generate a sympy expression for b, the impact parameter in the observer's frame.
-    
-    This represents the impact parameter for photon trajectories in Schwarzschild spacetime.
+    """Impact parameter at infinity from periastron: b = sqrt(P^3 / (P - 2M)).
+
+    Luminet (1979) eq.5. Minimised at the photon sphere P = 3M, where it
+    equals the critical impact parameter b_c = 3 sqrt(3) M.
     """
     p, m = sy.symbols("P, M")
     return sy.sqrt((p**3) / (p - 2 * m))
 
 
 def expr_r_inv() -> sy.Symbol:
-    """Generate a sympy expression for 1/r."""
+    """1/r along the photon orbit, Luminet (1979) eq.13:
+
+        1/r = -(Q - P + 2M)/(4MP) + (Q - P + 6M)/(4MP) sn^2(u, k^2)
+
+    with the argument u given by ``expr_u``.
+    """
     p, m, q, u, k = sy.symbols("P, M, Q, u, k")
     sn = sy.Function("sn")
     return (1 / (4 * m * p)) * (-(q - p + 2 * m) + (q - p + 6 * m) * sn(u, k**2) ** 2)
 
 
 def expr_u() -> sy.Symbol:
-    """Generate a sympy expression for the elliptic integral argument in geodesic calculations.
-    
-    This expression handles both direct and ghost image calculations using elliptic integrals.
+    """Argument u of sn(u, k^2) in Luminet (1979) eq.13.
+
+    Direct image (N = 0):  u = gamma / (2 sqrt(P/Q)) + F(zeta_inf, k)
+    Order-N image:         u = (gamma - 2 N pi) / (2 sqrt(P/Q)) - F(zeta_inf, k) + 2K(k)
+
+    The N = 1 branch describes a photon that sweeps 2 pi - gamma (sec. 3 and
+    the (1+n)th-order generalisation of eq.11), which is why callers pass
+    alpha + pi for odd N (see ``impact_parameter``).
     """
     gamma, z_inf, k, p, q, n = sy.symbols("gamma, zeta_inf, k, P, Q, N")
     return sy.Piecewise(
@@ -73,42 +84,48 @@ def expr_u() -> sy.Symbol:
 
 
 def expr_k() -> sy.Symbol:
-    """Generate a sympy expression for the elliptic integral modulus parameter.
-    
-    The modulus k is used in elliptic integrals for geodesic calculations in curved spacetime.
-    """
+    """Elliptic modulus k = sqrt((Q - P + 6M) / (2Q)), Luminet (1979) eq.12."""
     p, m, q = sy.symbols("P, M, Q")
     return sy.sqrt((q - p + 6 * m) / (2 * q))
 
 
 def expr_zeta_inf() -> sy.Symbol:
-    """Generate a sympy expression for zeta_inf."""
+    """zeta_inf = arcsin sqrt((Q - P + 2M)/(Q - P + 6M)), Luminet (1979) eq.12."""
     p, m, q = sy.symbols("P, M, Q")
     return sy.asin(sy.sqrt((q - p + 2 * m) / (q - p + 6 * m)))
 
 
 def expr_gamma() -> sy.Symbol:
-    """Generate a sympy expression for the geometric angle parameter.
-    
-    This angle relates the observer's polar angle to the disk inclination angle.
+    """Angle gamma between the emitter and the line of sight, Luminet (1979) eq.10:
+
+        cos(gamma) = cos(alpha) / sqrt(cos^2(alpha) + cot^2(theta_0))
+
+    alpha is the polar angle on the observer's plate, theta_0 the inclination.
     """
     alpha, theta_0 = sy.symbols("alpha, theta_0")
     return sy.acos(sy.cos(alpha) / sy.sqrt(sy.cos(alpha) ** 2 + sy.tan(theta_0) ** -2))
 
 
 def expr_ellipse() -> sy.Symbol:
-    """Generate a sympy expression for the Newtonian ellipse approximation.
-    
-    This provides a fallback calculation for cases where relativistic effects are minimal.
+    """Newtonian limit of eq.13 (b = P, sn ~ sin): b = r sin(gamma)
+    = r / sqrt(1 + tan^2(theta_0) cos^2(alpha)), Luminet (1979) sec. 3.
+
+    Used where eq.13 has no root (direct photons that never pass a
+    periastron, e.g. the near side of the disk at high inclination).
     """
     r, alpha, theta_0 = sy.symbols("r, alpha, theta_0")
     return r / sy.sqrt(1 + (sy.tan(theta_0) ** 2) * (sy.cos(alpha) ** 2))
 
 
 def expr_fs() -> sy.Symbol:
-    """Generate an expression for the intrinsic flux of an accretion disk.
+    """Novikov-Thorne intrinsic flux of a Schwarzschild thin disk:
 
-    This represents the standard Shakura-Sunyaev disk model flux profile.
+        F_s = (3 M mdot / 8 pi) / ((r* - 3) r*^(5/2))
+              * [sqrt(r*) - sqrt(6) + (sqrt(3)/2) ln(...)]
+
+    Page & Thorne (1974) eq.15n; Luminet (1979) eq.15 (whose printed
+    sqrt(3)/3 is a typo: his quoted F_max = 1.146e-4 at r* = 9.55 requires
+    sqrt(3)/2). Zero at the ISCO r* = 6.
     """
     m, rstar, mdot = sy.symbols(r"M, r^*, \dot{m}")
     return (
@@ -135,9 +152,14 @@ def expr_r_star() -> sy.Symbol:
 
 
 def expr_one_plus_z() -> sy.Symbol:
-    """Generate an expression for the total redshift factor (1+z).
-    
-    This includes both gravitational redshift and Doppler shift from orbital motion.
+    """Redshift factor of a Keplerian disk emitter, Luminet (1979) eq.19:
+
+        1 + z = (1 + sqrt(M/r^3) b sin(theta_0) sin(alpha)) / sqrt(1 - 3M/r)
+
+    The denominator is 1/u^t of a circular orbit (gravitational redshift plus
+    transverse Doppler, not the static sqrt(1 - 2M/r)); the numerator is the
+    Doppler term 1 + Omega L_z/E with L_z/E = b sin(theta_0) sin(alpha) (eq.17).
+    Valid for direct and ghost images alike.
     """
     m, r, theta_0, alpha, b = sy.symbols("M, r, theta_0, alpha, b")
     return (1 + sy.sqrt(m / r**3) * b * sy.sin(theta_0) * sy.sin(alpha)) / sy.sqrt(
@@ -146,7 +168,7 @@ def expr_one_plus_z() -> sy.Symbol:
 
 
 def expr_f0() -> sy.Symbol:
-    """Generate an expression for the observed bolometric flux."""
+    """Observed bolometric flux F_o = F_s / (1+z)^4 (Luminet 1979 sec. 4)."""
     fs, opz = sy.symbols("F_s, z_op")
     return fs / opz**4
 
@@ -226,10 +248,11 @@ def fast_root(
     tol: float = 1e-6,
     max_steps: int = 10,
 ) -> npt.NDArray[float]:
-    """Efficient root finding algorithm for vectorized geodesic calculations.
-    
-    Uses bracketing and bisection methods optimized for finding periastron distances
-    in black hole geodesic problems.
+    """Vectorised root of f(x, y_i) = 0 in x for every y_i.
+
+    Brackets the first sign change on the scan grid ``x`` (``find_brackets``),
+    then bisects ``max_steps`` times, so the root is resolved to
+    (x[1] - x[0]) / 2**max_steps. Rows with no sign change return NaN.
     """
     xmin, xmax = find_brackets(f, x, y, args, tol, max_steps)
 
@@ -241,7 +264,10 @@ def fast_root(
         f_mid = f(xmid, y, *args)
         sign_mid = np.sign(f_mid)
 
-        if np.nanmax(f_mid) < tol:
+        # Converged only when every residual is small in magnitude. (A signed
+        # test, nanmax(f_mid) < tol, also fires when all residuals are
+        # negative and returned after a single bisection step.)
+        if np.nanmax(np.abs(f_mid)) < tol:
             return xmid
         else:
             xmin = np.where(sign_min == sign_mid, xmid, xmin)
@@ -294,10 +320,18 @@ def impact_parameter(
     objective_func: Optional[Callable] = None,
     **root_kwargs
 ) -> npt.NDArray[np.float64]:
-    """Calculate impact parameters for photon trajectories in curved spacetime.
-    
-    Computes the impact parameter b for each viewing angle, accounting for
-    relativistic light bending effects around the black hole.
+    """Impact parameter b(alpha) of the order-n image of the ring at radius r.
+
+    Solves Luminet (1979) eq.13, 1 - r * (1/r)(P; alpha) = 0, for the
+    periastron P on a scan of P in [2.1M, 50M] refined by bisection
+    (``fast_root``), then converts with eq.5. Points with no root fall back
+    to the Newtonian ellipse (``expr_ellipse``).
+
+    alpha is the polar angle on the observer's plate for every order: the
+    returned (b, alpha) is where the image appears. For odd n the solve uses
+    alpha + pi, because eq.13's n = 1 branch encodes a sweep of 2 pi - gamma
+    while a ghost at plate angle alpha sweeps pi + gamma(alpha)
+    (gamma(alpha + pi) = pi - gamma(alpha)).
     """
     if objective_func is None:
         objective_func = lambda_objective()
@@ -335,10 +369,11 @@ def simulate_flux(
     npt.NDArray[np.float64],
     npt.NDArray[np.float64],
 ]:
-    """Complete flux simulation including geodesic effects and redshift.
-    
-    Performs end-to-end calculation from impact parameters to observed flux,
-    including all relativistic corrections for black hole accretion disk imaging.
+    """Plate position, redshift and observed flux of the order-n image of ring r.
+
+    b from ``impact_parameter`` (eq.13), 1+z from eq.19, normalised flux
+    F_s / (1+z)^4 (eq.15 with the sqrt(3)/2 correction). Returns
+    (alpha, b, 1+z, flux) with alpha the plate angle of each image point.
     """
     flux = lambda_normalized_bolometric_flux()
     one_plus_z = sy.lambdify(["alpha", "b", "theta_0", "M", "r"], expr_one_plus_z())
@@ -347,7 +382,10 @@ def simulate_flux(
     b = impact_parameter(alpha, r, theta_0, n, m, objective_func, **root_kwargs)
     opz = one_plus_z(alpha, b, theta_0, m, r)
 
-    return reorient_alpha(alpha, n), b, opz, flux(opz, r, m)
+    # impact_parameter already applies the pi flip for odd n, so (alpha, b)
+    # is the photographic-plate position of the image for every order.
+    # Re-orienting alpha here as well flipped the ghost image a second time.
+    return alpha, b, opz, flux(opz, r, m)
 
 
 # ============================================================================
