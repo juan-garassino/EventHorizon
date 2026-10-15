@@ -1,0 +1,21 @@
+{
+  "nonfinite_pixels": 0,
+  "corner_max_rel": 0.0,
+  "primary_pixels": 12671,
+  "secondary_pixels": 1224,
+  "secondary_below_center_frac": 0.4996527777777778,
+  "shadow_radius": 5.264690368131761,
+  "shadow_radius_over_bcrit": 1.0131901337469675,
+  "hole_pixels": 2,
+  "hole_frac_of_lit": 0.0001439366678661389,
+  "left_right_flux_ratio": 2.515769859151358,
+  "checks": {
+    "no_nan_inf": true,
+    "dark_background": true,
+    "primary_image": true,
+    "secondary_image": true,
+    "shadow_radius_near_bcrit": true,
+    "no_banding": true,
+    "approaching_side_brighter": true
+  }
+}
