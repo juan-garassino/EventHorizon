@@ -241,7 +241,7 @@ def fast_root(
         f_mid = f(xmid, y, *args)
         sign_mid = np.sign(f_mid)
 
-        if np.nanmax(f_mid) < tol:
+        if np.nanmax(np.abs(f_mid)) < tol:
             return xmid
         else:
             xmin = np.where(sign_min == sign_mid, xmid, xmin)
