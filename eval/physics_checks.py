@@ -236,13 +236,10 @@ except Exception as e:
 
 # Check 7: Intrinsic flux profile shape (flux = 0 at ISCO, peaks near r~8-10M)
 try:
-    from eventHorizon.math.flux_calculations import FluxCalculations
+    from eventHorizon.physics.fast_geodesics import flux_intrinsic_vec
 
-    fc = FluxCalculations(mass=M)
-
-    flux_isco = fc.calculate_intrinsic_flux(R_ISCO + 0.01)  # Just outside ISCO
-    flux_10M = fc.calculate_intrinsic_flux(10.0 * M)
-    flux_30M = fc.calculate_intrinsic_flux(30.0 * M)
+    flux_isco, flux_10M, flux_30M = flux_intrinsic_vec(
+        np.array([R_ISCO + 0.01, 10.0 * M, 30.0 * M]), M)
 
     # Flux should be near 0 at ISCO, peak around 8-10M, and decrease outward
     flux_increases = flux_10M > flux_isco
@@ -260,16 +257,14 @@ except Exception as e:
 
 # Check 8: Verify the PhysicsEngine redshift is consistent with sympy expression
 try:
-    from eventHorizon.core.physics_engine import PhysicsEngine
-
-    pe = PhysicsEngine(mass=M)
+    from eventHorizon.physics.disk_physics import redshift_factor
 
     # Test at r=10M, alpha=pi/4, inclination=80deg
     r_test = 10.0 * M
     alpha_test = np.pi / 4
     b_test = 8.0  # approximate impact parameter
 
-    z_engine = pe.redshift_factor(r_test, alpha_test, OBSERVER_INCLINATION_RAD, b_test)
+    z_engine = redshift_factor(r_test, alpha_test, OBSERVER_INCLINATION_RAD, M, b_test)
     z_sympy = float(one_plus_z_func(alpha_test, b_test, OBSERVER_INCLINATION_RAD, M, r_test))
 
     rel_err = abs(z_engine - z_sympy) / abs(z_sympy) if z_sympy != 0 else 0

@@ -7,8 +7,7 @@ into SVG paths and G-code toolpaths suitable for pen plotters.
 import math
 from pathlib import Path
 from typing import List, Tuple, Optional, Dict, Any
-from xml.etree.ElementTree import Element, SubElement, ElementTree, tostring
-from xml.dom import minidom
+from xml.etree.ElementTree import Element, SubElement, ElementTree, indent, tostring
 
 import numpy as np
 
@@ -191,12 +190,10 @@ def scatter_to_svg(
 
 
 def _write_svg(root: Element, path: str) -> None:
-    rough = tostring(root, encoding="unicode")
-    pretty = minidom.parseString(rough).toprettyxml(indent="  ")
-    # Remove extra xml declaration minidom adds
-    lines = pretty.split("\n")
-    if lines and lines[0].startswith("<?xml"):
-        lines[0] = '<?xml version="1.0" encoding="UTF-8"?>'
+    # Pretty-print in place with ElementTree (no re-parse through minidom).
+    indent(root, space="  ")
+    lines = ['<?xml version="1.0" encoding="UTF-8"?>',
+             tostring(root, encoding="unicode"), ""]
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w") as f:
         f.write("\n".join(lines))
