@@ -4,6 +4,7 @@ Edge fill standalone functions extracted from LuminetPointsHandler.
 These functions draw black fills for apparent disk edges (inner, outer,
 silhouette) used by the contour and scatter renderers.
 """
+import logging
 import numpy as np
 import matplotlib.pyplot as plt
 from typing import Optional
@@ -51,7 +52,7 @@ def compute_apparent_edge_b(
         return impact_parameter(angles, r_edge, inclination_rad, 0, mass,
                                 objective_func=obj_func)
     except Exception:
-        pass
+        logging.getLogger(__name__).debug("fast path failed; using fallback", exc_info=True)
 
     # Fallback: per-angle solver
     from ..physics.disk_physics import calc_impact_parameter_exact

@@ -7,6 +7,7 @@ ghost images, including the black hole shadow outline.
 Uses a precomputed 2D lookup table b(alpha, r) for vectorized interpolation,
 with Cython acceleration when available and pure-Python fallback otherwise.
 """
+import logging
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import RegularGridInterpolator
@@ -41,10 +42,8 @@ def _build_table_interpolator(
             n_alpha=n_alpha, n_r=n_r,
             r_min=r_min, r_max=r_max,
         )
-        return RegularGridInterpolator(
-            (alpha_grid, r_grid), table,
-            method='linear', bounds_error=False, fill_value=np.nan,
-        )
+        from ..math.fast_geodesics import _periodic_interp
+        return _periodic_interp(alpha_grid, r_grid, table)  # G-9
     except ImportError:
         pass
 
@@ -58,7 +57,7 @@ def _build_table_interpolator(
         )
         return interp
     except Exception:
-        pass
+        logging.getLogger(__name__).debug("fast path failed; using fallback", exc_info=True)
 
     return None
 
@@ -188,7 +187,7 @@ class IsoradialHandler(VisualizationHandler):
             except Exception:
                 continue
 
-        # --- Ghost isoradials (image_order=1, dashed, Y-flipped) ---
+        # --- Ghost isoradials (image_order=1, dashed) ---
         if show_ghost:
             for radius in radii:
                 try:
@@ -198,7 +197,9 @@ class IsoradialHandler(VisualizationHandler):
                     )
                     if len(impact_params) > 3:
                         x = [b * np.cos(a - np.pi / 2) for b, a in zip(impact_params, valid_angles)]
-                        y = [-b * np.sin(a - np.pi / 2) for b, a in zip(impact_params, valid_angles)]
+                        # No extra Y flip: the n=1 solver already flips alpha by pi,
+                        # so negating Y here drew the ghost upside down (GUARDIAN G-14).
+                        y = [b * np.sin(a - np.pi / 2) for b, a in zip(impact_params, valid_angles)]
 
                         all_polylines.append(list(zip(x, y)))
 

@@ -5,6 +5,7 @@ This module provides the data model for isoradial curves, which represent
 the apparent shape of matter at constant radius in the accretion disk
 as seen by a distant observer.
 """
+import ast
 import configparser
 import numpy as np
 from typing import List, Dict, Any, Optional, Tuple
@@ -35,7 +36,7 @@ class BaseModel(ABC):
     def read_parameters(config_file: str) -> Dict[str, Dict[str, Any]]:
         config = configparser.ConfigParser(inline_comment_prefixes='#')
         config.read(config_file)
-        return {section: {key: eval(val) for key, val in config[section].items()}
+        return {section: {key: _safe_literal(val) for key, val in config[section].items()}
                 for section in config.sections()}
 
     def get_configuration(self) -> Dict[str, Any]:
@@ -532,3 +533,48 @@ class VelocityFieldModel(BaseModel):
             'mass': self.mass,
             'inclination_deg': self.inclination_deg
         }
+
+# Names an ini value may reference (e.g. ``end_angle = np.pi``).
+_SAFE_NAMES = {"np.pi": np.pi, "np.e": np.e, "pi": np.pi}
+_BINOPS = {
+    ast.Add: lambda a, b: a + b, ast.Sub: lambda a, b: a - b,
+    ast.Mult: lambda a, b: a * b, ast.Div: lambda a, b: a / b,
+    ast.Pow: lambda a, b: _bounded_pow(a, b),
+}
+
+
+def _bounded_pow(a, b):
+    # An unbounded `9 ** 9 ** 9` would hang; config values never need this.
+    if abs(b) > 64:
+        raise ValueError(f"exponent too large: {b!r}")
+    return a ** b
+
+
+def _safe_literal(text: str) -> Any:
+    """Parse an ini value as a Python literal, never executing code.
+
+    Replaces a former ``eval(val)``. Accepts literals (numbers, strings,
+    tuples, lists, booleans, None), the constants in ``_SAFE_NAMES`` and
+    + - * / ** arithmetic on them. Anything else (calls, imports, other
+    attribute access) raises ``ValueError``.
+    """
+    def ev(node):
+        if isinstance(node, ast.Constant):
+            return node.value
+        if isinstance(node, (ast.Tuple, ast.List)):
+            items = [ev(e) for e in node.elts]
+            return tuple(items) if isinstance(node, ast.Tuple) else items
+        if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.UAdd, ast.USub)):
+            v = ev(node.operand)
+            return v if isinstance(node.op, ast.UAdd) else -v
+        if isinstance(node, ast.BinOp) and type(node.op) in _BINOPS:
+            return _BINOPS[type(node.op)](ev(node.left), ev(node.right))
+        if isinstance(node, (ast.Name, ast.Attribute)) and ast.unparse(node) in _SAFE_NAMES:
+            return _SAFE_NAMES[ast.unparse(node)]
+        raise ValueError(f"unsupported ini value: {text!r}")
+
+    try:
+        tree = ast.parse(text.strip(), mode="eval")
+    except SyntaxError as exc:
+        raise ValueError(f"unsupported ini value: {text!r}") from exc
+    return ev(tree.body)

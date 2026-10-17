@@ -86,6 +86,22 @@ def flux_observed_vec(r: np.ndarray, mass: float,
 # Lookup-table builder for impact parameter b(alpha, r)
 # ---------------------------------------------------------------------------
 
+def _periodic_interp(alpha_grid: np.ndarray, r_grid: np.ndarray,
+                     table: np.ndarray) -> RegularGridInterpolator:
+    """Interpolator over (alpha, r) that wraps alpha periodically.
+
+    The alpha grid is ``linspace(0, 2pi, endpoint=False)``; without the
+    wrap-around column, alpha in (alpha_grid[-1], 2pi) falls outside the grid
+    and interpolates to NaN (those particles were dropped).
+    """
+    alpha_ext = np.append(alpha_grid, 2 * np.pi)
+    table_ext = np.vstack([table, table[:1]])
+    return RegularGridInterpolator(
+        (alpha_ext, r_grid), table_ext,
+        method='linear', bounds_error=False, fill_value=np.nan,
+    )
+
+
 def build_impact_table(
     mass: float,
     inclination: float,
@@ -116,7 +132,8 @@ def build_impact_table(
     r_min, r_max : float or None
         Disk radii range (defaults to ISCO..50M).
     p_grid_size : int
-        Number of periastron scan points passed to fast_root.
+        Unused; kept for API compatibility. ``impact_parameter`` sizes its
+        own periastron scan grid from the radius (GUARDIAN G-13).
 
     Returns
     -------
@@ -138,11 +155,7 @@ def build_impact_table(
             n_alpha=n_alpha, n_r=n_r,
             r_min=r_min, r_max=r_max,
         )
-        interp = RegularGridInterpolator(
-            (alpha_grid, r_grid), table,
-            method='linear', bounds_error=False, fill_value=np.nan,
-        )
-        return interp, alpha_grid, r_grid
+        return _periodic_interp(alpha_grid, r_grid, table), alpha_grid, r_grid
     except ImportError:
         pass
 
@@ -156,8 +169,6 @@ def build_impact_table(
 
     table = np.empty((n_alpha, n_r), dtype=np.float64)
 
-    p_scan = np.linspace(2.1, max(50.0, 3.0 * r_max / mass), p_grid_size)
-
     for j, r_val in enumerate(r_grid):
         b_arr = impact_parameter(
             alpha_grid, r_val, inclination, n, mass,
@@ -165,11 +176,7 @@ def build_impact_table(
         )
         table[:, j] = b_arr
 
-    interp = RegularGridInterpolator(
-        (alpha_grid, r_grid), table,
-        method='linear', bounds_error=False, fill_value=np.nan,
-    )
-    return interp, alpha_grid, r_grid
+    return _periodic_interp(alpha_grid, r_grid, table), alpha_grid, r_grid
 
 
 # ---------------------------------------------------------------------------

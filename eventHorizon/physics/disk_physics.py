@@ -28,7 +28,7 @@ def redshift_factor(r: float, alpha: float, incl: float, mass: float, b: float) 
         grav_term = (1.0 - 3.0 * mass / r) ** (-0.5)
         z = (1.0 + orbital_term) * grav_term
         return z if np.isfinite(z) and z > 0 else 1.0
-    except Exception:
+    except (ArithmeticError, ValueError, TypeError):
         return 1.0
 
 
@@ -52,7 +52,7 @@ def flux_intrinsic(r: float, accretion_rate: float, mass: float) -> float:
             (1.0 / ((r_ - 3.0) * r ** 2.5)) * \
             (np.sqrt(r_) - np.sqrt(6) + (np.sqrt(3) / 2.0) * np.log(log_arg))
         return max(f, 0.0)
-    except Exception:
+    except (ArithmeticError, ValueError, TypeError):
         return 0.0
 
 
@@ -63,7 +63,7 @@ def flux_observed(r: float, accretion_rate: float, mass: float, redshift: float)
         if redshift <= 0:
             return 0.0
         return f_intr / (redshift ** 4)
-    except Exception:
+    except (ArithmeticError, ValueError, TypeError):
         return 0.0
 
 

@@ -232,6 +232,10 @@ def fast_root(
     in black hole geodesic problems.
     """
     xmin, xmax = find_brackets(f, x, y, args, tol, max_steps)
+    if np.all(np.isnan(xmin)):
+        # No sign change anywhere: nothing to bisect (and nanmax below would
+        # warn "All-NaN slice"). Callers fall back to the ellipse on NaN.
+        return xmin
 
     sign_min = np.sign(f(xmin, y, *args))
     sign_max = np.sign(f(xmax, y, *args))
@@ -241,7 +245,7 @@ def fast_root(
         f_mid = f(xmid, y, *args)
         sign_mid = np.sign(f_mid)
 
-        if np.nanmax(f_mid) < tol:
+        if np.nanmax(np.abs(f_mid)) < tol:
             return xmid
         else:
             xmin = np.where(sign_min == sign_mid, xmid, xmin)
@@ -311,9 +315,14 @@ def impact_parameter(
     # here is wrong (mirror of the correct value).
     alpha_solve = (np.asarray(alpha) + np.pi) % (2 * np.pi) if (n % 2 == 1) else alpha
 
+    # Periastron scan grid. A photon reaching the disk at radius r has
+    # periastron P <= r, so the grid must extend to (at least) r; a fixed
+    # upper bound of 50 left large radii unbracketed and silently fell back
+    # to the Newtonian ellipse (GUARDIAN G-13).
+    p_max = max(50.0, 1.05 * float(r_value))
     p_arr = fast_root(
         objective_func,
-        np.linspace(2.1, 50, 1000),
+        np.linspace(2.1, p_max, 1000),
         alpha_solve,
         (theta_0, r_value, n, m),
         **root_kwargs
@@ -451,7 +460,7 @@ class UnifiedGeodesics:
         try:
             p_arr = fast_root(
                 self.objective_func,
-                np.linspace(2.1, 50, 1000),
+                np.linspace(2.1, max(50.0, 1.05 * float(radius)), 1000),  # G-13
                 np.array([alpha]),
                 (inclination, radius, image_order, self.mass),
                 **kwargs
