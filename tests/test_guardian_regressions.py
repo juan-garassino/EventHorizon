@@ -261,3 +261,40 @@ def test_unified_periastron_large_radius(module):
     geo = module.UnifiedGeodesics(mass=1.0)
     p = geo.calculate_periastron(2.0, 300.0, INCL_80)
     assert p is not None and 50.0 < p < 300.0
+
+
+# --- run 2, pass 2: ghost isoradials drawn upside down ----------------------
+
+from eventHorizon.handlers.isoradial import IsoradialHandler as HandlerIso  # noqa: E402
+from eventHorizon.visualization.mode_router import IsoradialHandler as RouterIso  # noqa: E402
+
+
+@pytest.mark.parametrize("cls", [HandlerIso, RouterIso])
+def test_ghost_isoradial_matches_particle_ghost(cls, monkeypatch):
+    """G-14: the ghost (n=1) solver already flips alpha by pi (commit 012d51b),
+    but the isoradial handlers ALSO negated Y (the old reference's plot-time
+    flip), so the ghost ring was drawn upside down: bulging ABOVE the shadow
+    instead of below it, and disagreeing with the particle/contour renderers
+    (generate_particles_fast), which apply the flip only once."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    # Skip the 50-radius lookup table (~40 s); the per-angle solver path
+    # produces the same b(alpha) and the plotting code under test is shared.
+    import eventHorizon.handlers.isoradial as iso_mod
+    monkeypatch.setattr(iso_mod, "_build_table_interpolator", lambda *a, **k: None)
+    monkeypatch.setattr(RouterIso, "_build_table_interpolator", lambda *a, **k: None, raising=False)
+    h = cls({"mass": 1.0, "inclination": 80.0, "radii": [10],
+             "angular_resolution": 72, "show_ghost_image": True})
+    fig, _ = h.render()
+    plt.close(fig)
+    direct, ghost = (np.asarray(p) for p in h.export_data["polylines"])
+    assert direct[:, 1].max() > -direct[:, 1].min()  # direct: lensed arc above
+    # Particle convention: Y = b sin(alpha - pi/2) with b from the n=1 solver.
+    a = np.array([0.0, np.pi])
+    b = physics_geodesics.impact_parameter(a, 10.0, INCL_80, 1, 1.0)
+    y_expected = b * np.sin(a - np.pi / 2)        # [-7.4, +5.3]
+    assert ghost[:, 1].min() == pytest.approx(y_expected.min(), rel=0.02)
+    assert ghost[:, 1].max() == pytest.approx(y_expected.max(), rel=0.02)
+    assert -ghost[:, 1].min() > ghost[:, 1].max()  # ghost bulges BELOW

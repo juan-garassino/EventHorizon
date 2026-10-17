@@ -187,7 +187,7 @@ class IsoradialHandler(VisualizationHandler):
             except Exception:
                 continue
 
-        # --- Ghost isoradials (image_order=1, dashed, Y-flipped) ---
+        # --- Ghost isoradials (image_order=1, dashed) ---
         if show_ghost:
             for radius in radii:
                 try:
@@ -197,7 +197,9 @@ class IsoradialHandler(VisualizationHandler):
                     )
                     if len(impact_params) > 3:
                         x = [b * np.cos(a - np.pi / 2) for b, a in zip(impact_params, valid_angles)]
-                        y = [-b * np.sin(a - np.pi / 2) for b, a in zip(impact_params, valid_angles)]
+                        # No extra Y flip: the n=1 solver already flips alpha by pi,
+                        # so negating Y here drew the ghost upside down (GUARDIAN G-14).
+                        y = [b * np.sin(a - np.pi / 2) for b, a in zip(impact_params, valid_angles)]
 
                         all_polylines.append(list(zip(x, y)))
 
