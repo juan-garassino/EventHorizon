@@ -298,3 +298,19 @@ def test_ghost_isoradial_matches_particle_ghost(cls, monkeypatch):
     assert ghost[:, 1].min() == pytest.approx(y_expected.min(), rel=0.02)
     assert ghost[:, 1].max() == pytest.approx(y_expected.max(), rel=0.02)
     assert -ghost[:, 1].min() > ghost[:, 1].max()  # ghost bulges BELOW
+
+
+@pytest.mark.parametrize("module", [math_geodesics, physics_geodesics])
+def test_fast_root_no_bracket_returns_nan_quietly(module):
+    """When no alpha has a sign change, fast_root used to run all bisection
+    steps on NaNs and emit 'RuntimeWarning: All-NaN slice' (seen in every
+    apparent-inner-edge render). It now returns NaN immediately."""
+    import warnings
+
+    def f(x, y, *args):
+        return x * 0 + 1.0  # never crosses zero
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        out = module.fast_root(f, np.linspace(0, 1, 10), np.array([0.1, 0.2]), ())
+    assert np.all(np.isnan(out))

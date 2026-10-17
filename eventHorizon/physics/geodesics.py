@@ -232,6 +232,10 @@ def fast_root(
     in black hole geodesic problems.
     """
     xmin, xmax = find_brackets(f, x, y, args, tol, max_steps)
+    if np.all(np.isnan(xmin)):
+        # No sign change anywhere: nothing to bisect (and nanmax below would
+        # warn "All-NaN slice"). Callers fall back to the ellipse on NaN.
+        return xmin
 
     sign_min = np.sign(f(xmin, y, *args))
     sign_max = np.sign(f(xmax, y, *args))
