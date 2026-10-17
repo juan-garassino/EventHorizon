@@ -4,6 +4,7 @@ Mode router and handlers for unified draw_blackhole function.
 This module implements the mode-based routing system that dispatches
 different visualization types through a unified interface.
 """
+import logging
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -165,7 +166,7 @@ class LuminetPointsHandler(VisualizationHandler):
             grav_term = (1.0 - 3.0 * mass / r) ** (-0.5)
             z_factor = (1.0 + orbital_term) * grav_term
             return z_factor if np.isfinite(z_factor) and z_factor > 0 else 1.0
-        except:
+        except (ArithmeticError, ValueError, TypeError):
             return 1.0
     
     def _calc_flux_intrinsic(self, r: float, accretion_rate: float, mass: float) -> float:
@@ -188,7 +189,7 @@ class LuminetPointsHandler(VisualizationHandler):
                 (1.0 / ((r_ - 3.0) * r ** 2.5)) * \
                 (np.sqrt(r_) - np.sqrt(6) + (np.sqrt(3) / 2.0) * np.log(log_arg))
             return max(f, 0.0)
-        except:
+        except (ArithmeticError, ValueError, TypeError):
             return 0.0
 
     def _calc_flux_observed(self, r: float, accretion_rate: float, mass: float, redshift_factor: float) -> float:
@@ -200,7 +201,7 @@ class LuminetPointsHandler(VisualizationHandler):
             if redshift_factor <= 0:
                 return 0.0
             return flux_intr / (redshift_factor ** 4)
-        except:
+        except (ArithmeticError, ValueError, TypeError):
             return 0.0
     
     def _compute_apparent_edge_b(self, r_edge: float, angles: np.ndarray) -> np.ndarray:
@@ -231,7 +232,7 @@ class LuminetPointsHandler(VisualizationHandler):
                                      objective_func=obj_func)
             return b_arr
         except Exception:
-            pass
+            logging.getLogger(__name__).debug("fast path failed; using fallback", exc_info=True)
 
         # Fallback: per-angle solver
         b_arr = np.full(len(angles), np.nan)
@@ -240,7 +241,7 @@ class LuminetPointsHandler(VisualizationHandler):
                 b = self._calc_enhanced_impact_parameter_exact(r_edge, angle, inclination_rad, n=0)
                 if b is not None:
                     b_arr[i] = b
-            except:
+            except Exception:
                 continue
         return b_arr
 
@@ -416,7 +417,6 @@ class LuminetPointsHandler(VisualizationHandler):
         # --- Fast path: vectorized lookup table ---
         try:
             from ..math.fast_geodesics import generate_particles_fast, build_impact_table
-            from scipy.interpolate import RegularGridInterpolator
 
             # Try Cython-accelerated table builder first
             table_direct = None
@@ -428,10 +428,8 @@ class LuminetPointsHandler(VisualizationHandler):
                     table, alpha_g, r_g = cy_build_impact_table(
                         mass, incl, n, n_alpha=200, n_r=100,
                     )
-                    return RegularGridInterpolator(
-                        (alpha_g, r_g), table,
-                        method='linear', bounds_error=False, fill_value=np.nan,
-                    )
+                    from ..math.fast_geodesics import _periodic_interp
+                    return _periodic_interp(alpha_g, r_g, table)  # G-9
 
                 table_direct = _cy_interp(self.mass, inclination_rad, 0)
                 table_ghost = _cy_interp(self.mass, inclination_rad, 1) if show_ghost_image else None
@@ -586,7 +584,7 @@ class LuminetPointsHandler(VisualizationHandler):
             else:
                 return self._ellipse_fallback_exact(r, alpha, incl)
                 
-        except:
+        except Exception:
             return self._ellipse_fallback_exact(r, alpha, incl)
     
     def _eq13_exact(self, periastron: float, ir_radius: float, ir_angle: float, incl: float, n: int = 0) -> float:
@@ -612,7 +610,7 @@ class LuminetPointsHandler(VisualizationHandler):
             term2 = ((q - periastron + 6.0 * self.mass) / (4.0 * self.mass * periastron)) * sn2
             
             return 1.0 - ir_radius * (term1 + term2)
-        except:
+        except Exception:
             return float('inf')
     
     def _calc_q_exact(self, periastron: float) -> float:
@@ -835,7 +833,6 @@ class IsoradialHandler(VisualizationHandler):
 
         Tries Cython first, falls back to pure-Python, returns None if both fail.
         """
-        from scipy.interpolate import RegularGridInterpolator as RGI
 
         r_min = max(min(radii) - 0.1, 3.01 * mass)
         r_max = max(radii) + 0.1
@@ -848,10 +845,8 @@ class IsoradialHandler(VisualizationHandler):
                 n_alpha=n_alpha, n_r=n_r,
                 r_min=r_min, r_max=r_max,
             )
-            return RGI(
-                (alpha_grid, r_grid), table,
-                method='linear', bounds_error=False, fill_value=np.nan,
-            )
+            from ..math.fast_geodesics import _periodic_interp
+            return _periodic_interp(alpha_grid, r_grid, table)  # G-9
         except ImportError:
             pass
 
@@ -864,7 +859,7 @@ class IsoradialHandler(VisualizationHandler):
             )
             return interp
         except Exception:
-            pass
+            logging.getLogger(__name__).debug("fast path failed; using fallback", exc_info=True)
 
         return None
 

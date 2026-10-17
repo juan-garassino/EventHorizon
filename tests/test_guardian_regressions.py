@@ -97,3 +97,113 @@ def test_svg_export_is_well_formed(mod, tmp_path):
     root = ET.fromstring(text.split("\n", 1)[1])  # nosec B314 - self-generated
     assert root.tag.endswith("svg")
     assert any(el.tag.endswith(("polyline", "path")) for el in root.iter())
+
+
+# --- pass 3: literal parser edge cases --------------------------------------
+
+from eventHorizon.core.isoradial_model import _safe_literal  # noqa: E402
+
+
+@pytest.mark.parametrize("text, expected", [
+    ("3", 3), ("-2.5", -2.5), ("+4", 4), ("1e-8", 1e-8),
+    ("np.pi", np.pi), ("pi / 2", np.pi / 2), ("2 * np.pi", 2 * np.pi),
+    ("-np.pi", -np.pi), ("2 ** 3", 8), ("1 - 0.5", 0.5), ("np.e", np.e),
+    ("(-35, 35)", (-35, 35)), ("[1, 2.0]", [1, 2.0]), ("True", True),
+    ("None", None), ('"-"', "-"), ("  7  ", 7),
+])
+def test_safe_literal_accepts_literals_and_arithmetic(text, expected):
+    assert _safe_literal(text) == pytest.approx(expected) if isinstance(
+        expected, float) else _safe_literal(text) == expected
+
+
+@pytest.mark.parametrize("text", [
+    "__import__('os')", "__import__('os').system('true')", "os.system",
+    "np.load", "np.pi.__class__", "().__class__.__bases__", "open('x')",
+    "lambda: 1", "[x for x in (1,)]", "{'a': 1}", "a if b else c",
+    "x", "np", "1; 2", "", "1 +", "2 // 1", "1 << 2",
+])
+def test_safe_literal_rejects_code(text):
+    with pytest.raises(ValueError):
+        _safe_literal(text)
+
+
+def test_safe_literal_rejects_huge_power():
+    """`9 ** 9 ** 9` would hang the process building a ~370M-digit int."""
+    with pytest.raises(ValueError):
+        _safe_literal("9 ** 9 ** 9")
+
+
+# --- pass 3: physics logic bugs ----------------------------------------------
+
+from eventHorizon.math import fast_geodesics as math_fast  # noqa: E402
+from eventHorizon.math.spacetime_geometry import SpacetimeGeometry  # noqa: E402
+from eventHorizon.physics import fast_geodesics as physics_fast  # noqa: E402
+from eventHorizon.physics.spacetime import SpacetimeGeometry as PhysSpacetime  # noqa: E402
+
+
+@pytest.mark.parametrize("mod", [math_fast, physics_fast])
+def test_impact_table_covers_full_circle(mod):
+    """G-9: the alpha grid is linspace(0, 2pi, endpoint=False) and the
+    interpolator fills NaN outside it, so every particle sampled with
+    alpha in (alpha_max, 2pi) got b=NaN and was silently dropped -- a
+    missing wedge of the disk image."""
+    interp, alpha_grid, _ = mod.build_impact_table(
+        1.0, np.radians(80.0), n=0, n_alpha=12, n_r=3, r_min=6.0, r_max=12.0)
+    near_2pi = 0.5 * (alpha_grid[-1] + 2 * np.pi)
+    b = interp(np.array([[near_2pi, 9.0], [0.0, 9.0], [2 * np.pi - 1e-9, 9.0]]))
+    assert np.all(np.isfinite(b))
+    assert b[2] == pytest.approx(b[1], rel=1e-6)  # periodic in alpha
+
+
+@pytest.mark.parametrize("cls", [SpacetimeGeometry, PhysSpacetime])
+def test_disk_flux_zero_inside_isco(cls):
+    """G-10: calculate_disk_flux only zeroed r <= 3M (comment said ISCO), so
+    3M < r < 6M emitted and diverged as r -> 3M via 1/(r-3)."""
+    geo = cls(mass=1.0)
+    for r in (3.0001, 4.0, 5.9):
+        assert geo.calculate_disk_flux(r) == 0.0
+    for r in (7.0, 10.0, 30.0):
+        assert geo.calculate_disk_flux(r) == pytest.approx(
+            float(flux_intrinsic_vec(np.array([r]), 1.0)[0]), rel=1e-12)
+
+
+# --- pass 3: bare except no longer swallows KeyboardInterrupt ----------------
+
+from eventHorizon.visualization.mode_router import LuminetPointsHandler  # noqa: E402
+
+
+class _Interrupting:
+    """Operand whose arithmetic raises KeyboardInterrupt (simulates Ctrl-C)."""
+    def _boom(self, *_):
+        raise KeyboardInterrupt
+    __mul__ = __rmul__ = __truediv__ = __rtruediv__ = _boom
+
+
+@pytest.mark.parametrize("call", [
+    lambda h: h._calc_redshift_factor(10.0, 0.5, 1.0, 1.0, _Interrupting()),
+    lambda h: h._calc_flux_intrinsic(10.0, _Interrupting(), 1.0),
+    lambda h: h._eq13_exact(10.0, _Interrupting(), 0.5, 1.0),
+])
+def test_mode_router_math_does_not_swallow_keyboard_interrupt(call):
+    """G-11: bare `except:` in LuminetPointsHandler math helpers caught
+    KeyboardInterrupt/SystemExit, making a long render impossible to stop."""
+    handler = LuminetPointsHandler.__new__(LuminetPointsHandler)
+    handler.mass = 1.0
+    with pytest.raises(KeyboardInterrupt):
+        call(handler)
+
+
+def test_isoradial_table_fallback_is_logged_not_silent(monkeypatch, caplog):
+    """G-7: fast-path failures were swallowed with `except Exception: pass`;
+    they now fall back the same way but leave a debug log record."""
+    import logging
+
+    from eventHorizon.handlers import isoradial
+
+    def boom(*_a, **_k):
+        raise RuntimeError("table build failed")
+
+    monkeypatch.setattr(math_fast, "build_impact_table", boom)
+    with caplog.at_level(logging.DEBUG, logger=isoradial.__name__):
+        assert isoradial._build_table_interpolator(1.0, 1.0, 0, [6.0, 10.0]) is None
+    assert any("fallback" in r.getMessage() and r.exc_info for r in caplog.records)

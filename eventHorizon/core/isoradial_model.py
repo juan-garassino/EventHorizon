@@ -539,8 +539,15 @@ _SAFE_NAMES = {"np.pi": np.pi, "np.e": np.e, "pi": np.pi}
 _BINOPS = {
     ast.Add: lambda a, b: a + b, ast.Sub: lambda a, b: a - b,
     ast.Mult: lambda a, b: a * b, ast.Div: lambda a, b: a / b,
-    ast.Pow: lambda a, b: a ** b,
+    ast.Pow: lambda a, b: _bounded_pow(a, b),
 }
+
+
+def _bounded_pow(a, b):
+    # An unbounded `9 ** 9 ** 9` would hang; config values never need this.
+    if abs(b) > 64:
+        raise ValueError(f"exponent too large: {b!r}")
+    return a ** b
 
 
 def _safe_literal(text: str) -> Any:

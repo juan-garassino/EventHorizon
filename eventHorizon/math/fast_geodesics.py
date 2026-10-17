@@ -86,6 +86,22 @@ def flux_observed_vec(r: np.ndarray, mass: float,
 # Lookup-table builder for impact parameter b(alpha, r)
 # ---------------------------------------------------------------------------
 
+def _periodic_interp(alpha_grid: np.ndarray, r_grid: np.ndarray,
+                     table: np.ndarray) -> RegularGridInterpolator:
+    """Interpolator over (alpha, r) that wraps alpha periodically.
+
+    The alpha grid is ``linspace(0, 2pi, endpoint=False)``; without the
+    wrap-around column, alpha in (alpha_grid[-1], 2pi) falls outside the grid
+    and interpolates to NaN (those particles were dropped).
+    """
+    alpha_ext = np.append(alpha_grid, 2 * np.pi)
+    table_ext = np.vstack([table, table[:1]])
+    return RegularGridInterpolator(
+        (alpha_ext, r_grid), table_ext,
+        method='linear', bounds_error=False, fill_value=np.nan,
+    )
+
+
 def build_impact_table(
     mass: float,
     inclination: float,
@@ -138,11 +154,7 @@ def build_impact_table(
             n_alpha=n_alpha, n_r=n_r,
             r_min=r_min, r_max=r_max,
         )
-        interp = RegularGridInterpolator(
-            (alpha_grid, r_grid), table,
-            method='linear', bounds_error=False, fill_value=np.nan,
-        )
-        return interp, alpha_grid, r_grid
+        return _periodic_interp(alpha_grid, r_grid, table), alpha_grid, r_grid
     except ImportError:
         pass
 
@@ -165,11 +177,7 @@ def build_impact_table(
         )
         table[:, j] = b_arr
 
-    interp = RegularGridInterpolator(
-        (alpha_grid, r_grid), table,
-        method='linear', bounds_error=False, fill_value=np.nan,
-    )
-    return interp, alpha_grid, r_grid
+    return _periodic_interp(alpha_grid, r_grid, table), alpha_grid, r_grid
 
 
 # ---------------------------------------------------------------------------

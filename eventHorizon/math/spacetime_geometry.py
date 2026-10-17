@@ -114,7 +114,7 @@ class SpacetimeGeometry:
         try:
             r_normalized = radius / self.mass
             
-            if r_normalized <= 3.0:  # Inside ISCO
+            if r_normalized <= 6.0:  # Inside ISCO (6M): no emission
                 return 0.0
             
             # Luminet's Shakura-Sunyaev disk flux formula

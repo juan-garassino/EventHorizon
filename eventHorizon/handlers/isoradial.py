@@ -7,6 +7,7 @@ ghost images, including the black hole shadow outline.
 Uses a precomputed 2D lookup table b(alpha, r) for vectorized interpolation,
 with Cython acceleration when available and pure-Python fallback otherwise.
 """
+import logging
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import RegularGridInterpolator
@@ -41,10 +42,8 @@ def _build_table_interpolator(
             n_alpha=n_alpha, n_r=n_r,
             r_min=r_min, r_max=r_max,
         )
-        return RegularGridInterpolator(
-            (alpha_grid, r_grid), table,
-            method='linear', bounds_error=False, fill_value=np.nan,
-        )
+        from ..math.fast_geodesics import _periodic_interp
+        return _periodic_interp(alpha_grid, r_grid, table)  # G-9
     except ImportError:
         pass
 
@@ -58,7 +57,7 @@ def _build_table_interpolator(
         )
         return interp
     except Exception:
-        pass
+        logging.getLogger(__name__).debug("fast path failed; using fallback", exc_info=True)
 
     return None
 
