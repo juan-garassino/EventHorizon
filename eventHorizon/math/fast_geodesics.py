@@ -132,7 +132,8 @@ def build_impact_table(
     r_min, r_max : float or None
         Disk radii range (defaults to ISCO..50M).
     p_grid_size : int
-        Number of periastron scan points passed to fast_root.
+        Unused; kept for API compatibility. ``impact_parameter`` sizes its
+        own periastron scan grid from the radius (GUARDIAN G-13).
 
     Returns
     -------
@@ -167,8 +168,6 @@ def build_impact_table(
     obj_func = lambda_objective()
 
     table = np.empty((n_alpha, n_r), dtype=np.float64)
-
-    p_scan = np.linspace(2.1, max(50.0, 3.0 * r_max / mass), p_grid_size)
 
     for j, r_val in enumerate(r_grid):
         b_arr = impact_parameter(

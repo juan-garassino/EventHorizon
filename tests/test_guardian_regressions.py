@@ -207,3 +207,57 @@ def test_isoradial_table_fallback_is_logged_not_silent(monkeypatch, caplog):
     with caplog.at_level(logging.DEBUG, logger=isoradial.__name__):
         assert isoradial._build_table_interpolator(1.0, 1.0, 0, [6.0, 10.0]) is None
     assert any("fallback" in r.getMessage() and r.exc_info for r in caplog.records)
+
+
+# --- run 2: impact-parameter known answers -----------------------------------
+
+INCL_80 = np.radians(80.0)
+ALPHAS = np.array([0.3, 1.0, 2.0, np.pi, 4.0, 5.5])
+
+
+@pytest.mark.parametrize("module", [math_geodesics, physics_geodesics])
+@pytest.mark.parametrize("n", [0, 1])
+def test_impact_parameter_matches_exact_solver(module, n):
+    """Backlog 2: the vectorized sympy/fast_root solver and the scalar
+    bisection solver (calc_impact_parameter_exact) are two independent
+    implementations of Luminet eq.13; they must agree."""
+    b = module.impact_parameter(ALPHAS, 10.0, INCL_80, n, 1.0)
+    exact = [disk_physics.calc_impact_parameter_exact(10.0, a, INCL_80, n, 1.0) for a in ALPHAS]
+    np.testing.assert_allclose(b, exact, rtol=1e-4)
+
+
+@pytest.mark.parametrize("n", [0, 1])
+def test_impact_parameter_mirror_symmetric(n):
+    """The isoradials of a Schwarzschild disk are left/right symmetric:
+    b(alpha) == b(2pi - alpha), for direct and ghost images alike."""
+    b = physics_geodesics.impact_parameter(ALPHAS, 10.0, INCL_80, n, 1.0)
+    b_mirror = physics_geodesics.impact_parameter(2 * np.pi - ALPHAS, 10.0, INCL_80, n, 1.0)
+    np.testing.assert_allclose(b, b_mirror, rtol=1e-9)
+
+
+def test_ghost_impact_parameter_outside_photon_ring():
+    """Ghost (n=1) photons wind around the hole, so their apparent radius is
+    always >= the critical impact parameter 3*sqrt(3) M."""
+    b = physics_geodesics.impact_parameter(ALPHAS, 10.0, INCL_80, 1, 1.0)
+    assert np.all(b >= 3 * np.sqrt(3) - 1e-6)
+
+
+@pytest.mark.parametrize("module", [math_geodesics, physics_geodesics])
+def test_impact_parameter_large_radius_not_ellipse_fallback(module):
+    """G-13: the periastron scan grid was hard-capped at P=50, so for disk
+    radii beyond ~120M the root was never bracketed and the solver silently
+    fell back to the Newtonian ellipse (13% error at r=150, alpha=2)."""
+    alphas = np.array([1.0, 2.0, np.pi, 4.0])
+    for r in (150.0, 300.0):
+        b = module.impact_parameter(alphas, r, INCL_80, 0, 1.0)
+        exact = [disk_physics.calc_impact_parameter_exact(r, a, INCL_80, 0, 1.0) for a in alphas]
+        np.testing.assert_allclose(b, exact, rtol=1e-4)
+
+
+@pytest.mark.parametrize("module", [math_geodesics, physics_geodesics])
+def test_unified_periastron_large_radius(module):
+    """G-13 (second site): UnifiedGeodesics.calculate_periastron used the
+    same P<=50 scan grid and returned None for large radii."""
+    geo = module.UnifiedGeodesics(mass=1.0)
+    p = geo.calculate_periastron(2.0, 300.0, INCL_80)
+    assert p is not None and 50.0 < p < 300.0
